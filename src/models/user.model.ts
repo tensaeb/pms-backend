@@ -17,6 +17,7 @@ const userSchema = new Schema<IUser>(
       type: String,
       enum: ["active", "inactive"],
       default: "active",
+      set: (val: string) => val.toLowerCase(), // Convert input to lowercase
     },
     photo: { type: String },
     resetCode: { type: String },

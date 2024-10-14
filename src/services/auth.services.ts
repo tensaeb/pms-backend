@@ -1,77 +1,68 @@
+import multer from "multer";
+import path from "path";
 import bcrypt from "bcryptjs";
-
-import { IUser } from "../interfaces/user.interface";
-import { User } from "../models/user.model";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import { config } from "dotenv";
-config();
+import sendEmail from "../helpers/mailer";
+import { User } from "../models/user.model";
 
-const JWT_SECRET = process.env.JWT_SECRET || "secret";
-
-export class AuthService {
-  async createUser(
-    userData: IUser,
-    file?: Express.Multer.File,
-    registeredById?: string
-  ): Promise<IUser> {
-    try {
-      const { email, password, role } = userData;
-
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        throw new Error("User already exists");
-      }
-
-      // Hash password
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-
-      // Create new user
-      const newUser = new User({
-        ...userData,
-        password: hashedPassword,
-        registeredBy: registeredById,
-      });
-
-      if (role === "Admin") {
-        const today = new Date();
-        const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-        const endOfDay = new Date(today.setHours(23, 59, 59, 999));
-
-        newUser.activeStart = startOfDay;
-        newUser.activeEnd = endOfDay;
-      }
-
-      // If file is provided, save photo filename
-      if (file) {
-        newUser.photo = file.filename;
-      }
-
-      return await newUser.save();
-    } catch (error: any) {
-      throw new Error("Failed to register user");
-    }
+class AuthService {
+  private generateToken(user: any, expiresIn: string): string {
+    return jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET!,
+      { expiresIn }
+    );
   }
 
-  async loginUser(
-    email: string,
-    password: string
-  ): Promise<{ token: string; user: IUser }> {
-    try {
-      const user = await User.findOne({ email });
-      if (!user) {
-        throw new Error("Invalid credentials");
-      }
-
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        throw new Error("Invalid credentials");
-      }
-
-      const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "1d" });
-      return { token, user };
-    } catch (error: any) {
-      throw new Error("Failed to login user");
+  // Login user
+  async loginUser(email: string, password: string) {
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error("Invalid credentials");
     }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      throw new Error("Invalid credentials");
+    }
+
+    const token = this.generateToken(user, "1h");
+    const refreshToken = this.generateToken(user, "7d");
+
+    return {
+      token,
+      refreshToken,
+      user,
+    };
+  }
+
+  // Refresh token
+  refreshToken(refreshToken: string) {
+    try {
+      const user = jwt.verify(refreshToken, process.env.JWT_SECRET as string);
+      const newAccessToken = this.generateToken(user, "1h");
+      return newAccessToken;
+    } catch (err) {
+      throw new Error("Invalid refresh token");
+    }
+  }
+  // Request password reset
+  async requestPasswordReset(email: string) {
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const resetCode = crypto.randomBytes(4).toString("hex").toUpperCase();
+    user.resetCode = resetCode;
+    await user.save();
+
+    await sendEmail(
+      user.email,
+      "Password Reset Request",
+      `Your password reset code is ${resetCode}`
+    );
   }
 }
+export const authService = new AuthService();

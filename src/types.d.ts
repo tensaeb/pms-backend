@@ -1,11 +1,9 @@
-// src/types/custom.d.ts
-
-import { IUser } from "../interfaces/user.interface";
+import { DecodedToken } from "./middlewares/authMiddleware";
 
 declare global {
   namespace Express {
     interface Request {
-      user?: IUser; // Add user to the request object
+      user?: DecodedToken;
     }
   }
 }

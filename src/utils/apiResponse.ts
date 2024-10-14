@@ -1,9 +1,9 @@
 // utils/apiResponse.ts
 export interface ApiResponse<T> {
   status: string;
-  message: string;
+  message?: string;
   data?: T;
-  error?: any;
+  error?: string | null;
 }
 
 export const successResponse = <T>(
@@ -14,16 +14,18 @@ export const successResponse = <T>(
     status: "success",
     message,
     data,
+    error: null,
   };
 };
 
 export const errorResponse = (
-  error: any,
+  error: string,
   message = "An error occurred"
 ): ApiResponse<null> => {
   return {
     status: "error",
     message,
     error,
+    data: null,
   };
 };

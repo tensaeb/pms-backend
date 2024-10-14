@@ -7,6 +7,20 @@ import dotenv from "dotenv";
 dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET || "secret";
 
+export interface DecodedToken {
+  id: string;
+  role: string;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: DecodedToken;
+      role?: string | undefined;
+    }
+  }
+}
+
 // Middleware to protect routes (JWT authentication)
 export const authenticate = async (
   req: Request,
@@ -21,7 +35,9 @@ export const authenticate = async (
     try {
       token = req.headers.authorization.split(" ")[1];
       const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
-      req.user = (await User.findById(decoded.id).select("-password")) as IUser;
+      req.user = (await User.findById(decoded.id).select(
+        "-password"
+      )) as DecodedToken;
       next();
     } catch (error) {
       res.status(401).json({ message: "Not authorized, token failed" });
