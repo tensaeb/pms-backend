@@ -8,8 +8,13 @@ const router = express.Router();
 router.post("/create-superuser", userController.createSuperUser);
 
 // CREATE new user (Only Admin or SuperAdmin)
-router.post("/admin", authenticate, superAdmin, userController.createUser);
-router.post("/superadmin", authenticate, superAdmin, userController.createUser);
+router.post("/admin", authenticate, superAdmin, userController.createAdmin);
+router.post(
+  "/superadmin",
+  authenticate,
+  superAdmin,
+  userController.createSuperAdmin
+);
 router.post("/", authenticate, admin, userController.createUser);
 
 //GET users with role

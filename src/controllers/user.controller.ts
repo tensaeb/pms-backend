@@ -39,6 +39,88 @@ class UserController {
     }
   }
 
+  //create new admin user
+  public async createAdmin(req: Request, res: Response): Promise<void> {
+    try {
+      const loggedInUserId = req.user?.id;
+
+      // Check if loggedInUserId is available
+      if (!loggedInUserId) {
+        res
+          .status(400)
+          .json(
+            errorResponse(
+              "Logged in user ID is missing",
+              "Failed to create admin"
+            )
+          );
+      }
+
+      const file = req.file;
+
+      if (!loggedInUserId) {
+        res
+          .status(400)
+          .json(
+            errorResponse(
+              "Logged in user ID is missing",
+              "Failed to create Super admin"
+            )
+          );
+      }
+
+      const userData = { ...req.body, role: "Admin" };
+      const newAdmin = await userService.createUser(
+        userData,
+        loggedInUserId,
+        file
+      );
+
+      res
+        .status(201)
+        .json(successResponse(newAdmin, "Admin created successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to create admin"));
+    }
+  }
+
+  // Create a new SuperAdmin
+  public async createSuperAdmin(req: Request, res: Response): Promise<void> {
+    try {
+      const loggedInUserId = req.user?.id;
+
+      if (!loggedInUserId) {
+        res
+          .status(400)
+          .json(
+            errorResponse(
+              "Logged in user ID is missing",
+              "Failed to create superadmin"
+            )
+          );
+      }
+
+      const file = req.file;
+      const userData = { ...req.body, role: "SuperAdmin" };
+      const newSuperAdmin = await userService.createUser(
+        userData,
+        loggedInUserId,
+        file
+      );
+      res
+        .status(201)
+        .json(
+          successResponse(newSuperAdmin, "SuperAdmin created successfully")
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to create superadmin"));
+    }
+  }
+
   // Get all users with pagination
   public async getAllUsers(req: Request, res: Response): Promise<void> {
     try {

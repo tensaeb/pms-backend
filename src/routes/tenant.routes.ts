@@ -1,0 +1,38 @@
+import express from "express";
+import multer from "multer";
+import { tenantController } from "../controllers/tenant.controller";
+import { admin, authenticate, superAdmin } from "../middlewares/authMiddleware";
+
+const router = express.Router();
+
+// Set up multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/"); // Change this path as needed
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
+
+// Create the multer instance
+const upload = multer({ storage: storage }).array("idProof", 3); // Accept up to 3 ID proofs
+
+router.use(authenticate);
+
+// Create a tenant
+router.post("/", admin, upload, tenantController.createTenant);
+
+// GET tenants (for all users)
+router.get("/", tenantController.getAllTenants);
+
+// GET tenant by ID
+router.get("/:id", tenantController.getTenantById);
+
+// UPDATE tenant by ID
+router.put("/:id", admin, upload, tenantController.updateTenant);
+
+// DELETE tenant by ID
+router.delete("/:id", admin, tenantController.deleteTenant);
+
+export default router;

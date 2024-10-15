@@ -39,11 +39,15 @@ class UserService {
   //create user
   public async createUser(
     userData: Partial<IUser>,
-    loggedInUserId: string,
+    loggedInUserId: string | undefined,
     file?: Express.Multer.File
   ): Promise<IUser> {
     const { name, email, phoneNumber, address, role, status, password } =
       userData;
+
+    if (!loggedInUserId) {
+      throw new Error("Logged in user ID is required");
+    }
 
     const hashedPassword = await bcrypt.hash(password!, 10);
 

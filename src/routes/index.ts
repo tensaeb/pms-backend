@@ -2,17 +2,11 @@ import multer, { StorageEngine } from "multer";
 import express, { Request, Response, Router } from "express";
 import path from "path";
 
-import userRoutes from "./user.routes";
 import authRoutes from "./auth.routes";
-
-// Assuming the userRoutes, propertyRoutes, tenantRoutes, leaseRoutes,
-// maintenanceRoutes, and rentInvoiceRoutes are imported from other modules
-// import userRoutes from "./userRoutes";
-// import propertyRoutes from "./propertyRoutes";
-// import tenantRoutes from "./tenantRoutes";
-// import leaseRoutes from "./leaseRoutes";
-// import maintenanceRoutes from "./maintenanceRoutes";
-// import rentInvoiceRoutes from "./rentInvoiceRoutes";
+import userRoutes from "./user.routes";
+import propertyRoutes from "./property.routes";
+import tenantRoutes from "./tenant.routes";
+import leaseRoutes from "./lease.route";
 
 const router: Router = express.Router();
 
@@ -71,14 +65,11 @@ router.post(
 router.use("/uploads", express.static(path.join(__dirname, "uploads")));
 router.use("/receipts", express.static(path.join(__dirname, "receipts"))); // Serve receipts
 
-router.use("/users", userRoutes);
-router.use("/auth", authRoutes);
 // API routes
-// router.use("/users", userRoutes);
-// router.use("/properties", propertyRoutes);
-// router.use("/tenants", tenantRoutes);
-// router.use("/leases", leaseRoutes);
-// router.use("/maintenance", maintenanceRoutes);
-// router.use("/invoices", rentInvoiceRoutes); // Rent invoice routes
+router.use("/auth", authRoutes);
+router.use("/users", userRoutes);
+router.use("/properties", propertyRoutes);
+router.use("/tenants", tenantRoutes);
+router.use("/lease", leaseRoutes);
 
 export default router;
