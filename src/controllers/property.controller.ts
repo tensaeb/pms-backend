@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { propertyService } from "../services/property.services";
+import path from "path";
 
 import {
   ApiResponse,
@@ -87,6 +88,44 @@ class PropertyController {
       res
         .status(500)
         .json(errorResponse(error.message, "Failed to delete property"));
+    }
+  }
+
+  //Generate Report
+  public async generateReport(req: Request, res: Response): Promise<void> {
+    try {
+      const { startDate, endDate } = req.query;
+
+      // Validate startDate and endDate
+      if (!startDate || !endDate) {
+        res
+          .status(400)
+          .json(errorResponse("Start date and end date are required"));
+        return;
+      }
+
+      // Generate the report and get file paths along with the properties
+      const { csvPath, wordPath, properties } =
+        await propertyService.generateReport(
+          startDate as string,
+          endDate as string
+        );
+
+      // Return the file paths and the properties data in the response
+      res.status(200).json({
+        message: "Report generated successfully",
+        data: {
+          files: {
+            csv: csvPath,
+            word: wordPath,
+          },
+          properties, // Return the properties data in the response
+        },
+      });
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to generate report"));
     }
   }
 }

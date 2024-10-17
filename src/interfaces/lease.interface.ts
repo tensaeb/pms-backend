@@ -1,8 +1,10 @@
 import { Document, Types } from "mongoose";
+import { ITenant } from "./tenant.interface";
+import { IProperty } from "./property.interface";
 
 export interface ILease extends Document {
-  tenant: Types.ObjectId;
-  property: Types.ObjectId;
+  tenant: Types.ObjectId | ITenant;
+  property: Types.ObjectId | IProperty;
   leaseStart: Date;
   leaseEnd: Date;
   rentAmount: number;
@@ -15,4 +17,6 @@ export interface ILease extends Document {
   additionalOccupants?: string[];
   utilitiesAndServices?: string;
   documents?: string[];
+  createdAt?: Date;
+  updatedAt?: Date;
 }

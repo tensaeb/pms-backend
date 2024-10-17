@@ -20,6 +20,9 @@ const upload = multer({ storage: storage }).array("idProof", 3); // Accept up to
 
 router.use(authenticate);
 
+//Generate Report
+router.get("/report", admin, tenantController.generateReport);
+
 // Create a tenant
 router.post("/", admin, upload, tenantController.createTenant);
 

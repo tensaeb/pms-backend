@@ -134,6 +134,43 @@ class MaintenanceController {
         );
     }
   }
+
+  public async generateReport(req: Request, res: Response): Promise<void> {
+    try {
+      const { startDate, endDate } = req.query;
+
+      // Validate startDate and endDate
+      if (!startDate || !endDate) {
+        res
+          .status(400)
+          .json({ message: "Start date and end date are required" });
+        return;
+      }
+
+      // Generate the report and get file paths along with the maintenance requests
+      const { csvPath, wordPath, maintenanceRequests } =
+        await maintenanceService.generateReport(
+          startDate as string,
+          endDate as string
+        );
+
+      // Return the file paths and the maintenance requests data in the response
+      res.status(200).json({
+        message: "Report generated successfully",
+        data: {
+          files: {
+            csv: csvPath,
+            word: wordPath,
+          },
+          maintenanceRequests, // Return the maintenance requests data in the response
+        },
+      });
+    } catch (error: any) {
+      res
+        .status(500)
+        .json({ message: "Failed to generate report", error: error.message });
+    }
+  }
 }
 
 export const maintenanceController = new MaintenanceController();

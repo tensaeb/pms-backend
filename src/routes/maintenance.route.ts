@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
 import { maintenanceController } from "../controllers/maintenance.controller";
-import { authenticate } from "../middlewares/authMiddleware";
+import { admin, authenticate } from "../middlewares/authMiddleware";
 
 const router = express.Router();
 
@@ -41,6 +41,9 @@ const upload = multer({
 });
 
 router.use(authenticate);
+
+// Route for generating maintenance report
+router.get("/report", admin, maintenanceController.generateReport);
 
 // Create a new maintenance request
 router.post(

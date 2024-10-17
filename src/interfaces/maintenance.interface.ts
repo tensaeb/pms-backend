@@ -18,4 +18,6 @@ export interface IMaintenance extends Document {
   priorityLevel?: "Low" | "Medium" | "High";
   estimatedCompletionTime?: Date;
   notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

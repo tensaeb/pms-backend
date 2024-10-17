@@ -11,4 +11,6 @@ export interface IProperty extends Document {
   floorPlan?: string;
   amenities?: string[];
   photos: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }

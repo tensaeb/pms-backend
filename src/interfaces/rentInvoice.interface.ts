@@ -1,8 +1,10 @@
 import { Document, Schema } from "mongoose";
+import { ITenant } from "./tenant.interface";
+import { IProperty } from "./property.interface";
 
 export interface IRentInvoice extends Document {
-  tenant: Schema.Types.ObjectId;
-  property: Schema.Types.ObjectId;
+  tenant: Schema.Types.ObjectId | ITenant;
+  property: Schema.Types.ObjectId | IProperty;
   invoiceDate: Date;
   rentAmount: number;
   additionalCharges: number;
@@ -16,4 +18,6 @@ export interface IRentInvoice extends Document {
     paymentMethod: "Bank Transfer" | "Credit Card" | "Cash" | "Other";
     receiptUrl?: string;
   }[];
+  createdAt?: Date;
+  updatedAt?: Date;
 }

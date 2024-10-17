@@ -20,6 +20,9 @@ const upload = multer({ storage: storage }).array("photos", 5); // Accept up to 
 
 router.use(authenticate);
 
+// Generate CSV and Word reports within a date range (admin only)
+router.get("/report", admin, propertyController.generateReport);
+
 // Create a property
 router.post("/", superAdmin, upload, propertyController.createProperty);
 

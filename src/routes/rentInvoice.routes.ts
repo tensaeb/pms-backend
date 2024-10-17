@@ -6,6 +6,9 @@ const router = express.Router();
 
 router.use(authenticate);
 
+// Route for generating rent invoice report
+router.get("/report", admin, rentInvoiceController.generateReport);
+
 // Create a rent invoice
 router.post("/", admin, rentInvoiceController.createRentInvoice);
 

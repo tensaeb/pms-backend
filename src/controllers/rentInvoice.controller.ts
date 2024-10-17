@@ -100,6 +100,44 @@ class RentInvoiceController {
         .json(errorResponse(error.message, "Failed to delete rent invoice"));
     }
   }
+
+  // Generate rent invoice report
+  public async generateReport(req: Request, res: Response): Promise<void> {
+    try {
+      const { startDate, endDate } = req.query;
+
+      // Validate startDate and endDate
+      if (!startDate || !endDate) {
+        res
+          .status(400)
+          .json({ message: "Start date and end date are required" });
+        return;
+      }
+
+      // Generate the report and get file paths along with the rent invoices
+      const { csvPath, wordPath, rentInvoices } =
+        await rentInvoiceService.generateReport(
+          startDate as string,
+          endDate as string
+        );
+
+      // Return the file paths and the rent invoices data in the response
+      res.status(200).json({
+        message: "Report generated successfully",
+        data: {
+          files: {
+            csv: csvPath,
+            word: wordPath,
+          },
+          rentInvoices, // Return the rent invoices data in the response
+        },
+      });
+    } catch (error: any) {
+      res
+        .status(500)
+        .json({ message: "Failed to generate report", error: error.message });
+    }
+  }
 }
 
 export const rentInvoiceController = new RentInvoiceController();

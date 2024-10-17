@@ -20,6 +20,9 @@ const upload = multer({ storage: storage }).array("documents", 5); // Accept up 
 
 router.use(authenticate);
 
+// Route for generating lease report
+router.get("/report", admin, leaseController.generateReport);
+
 // Route to download lease document
 router.get("/download/:file", leaseController.downloadLeaseDocument);
 

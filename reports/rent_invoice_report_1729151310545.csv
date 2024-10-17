@@ -1,0 +1,3 @@
+"tenantName","propertyTitle","invoiceDate","rentAmount","additionalCharges","totalAmount","dueDate","paymentStatus","createdAt","updatedAt"
+" John Doe","Beautiful Apartment","2024-10-16T07:08:33.580Z",1000,50,1050,"2023-07-01T00:00:00.000Z","Pending","2024-10-16T07:08:33.586Z","2024-10-16T07:08:33.586Z"
+" John Doe","Beautiful Apartment","2024-10-16T08:08:21.616Z",1000,50,1050,"2023-07-01T00:00:00.000Z","Pending","2024-10-16T08:08:21.621Z","2024-10-16T08:08:21.621Z"
