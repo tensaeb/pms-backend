@@ -27,6 +27,7 @@ const tenantSchema = new Schema<ITenant>(
         "Exceeds the limit of 3 ID proofs",
       ],
     },
+    password: { type: String, required: true },
     paymentMethod: { type: String, required: true },
     moveInDate: { type: Date, required: true },
     emergencyContacts: [String],

@@ -18,6 +18,7 @@ export interface ITenant extends Document {
     unit: string;
     propertyId: Schema.Types.ObjectId;
   };
+  password: string;
   idProof: string[];
   paymentMethod: string;
   moveInDate: Date;

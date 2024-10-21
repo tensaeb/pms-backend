@@ -15,8 +15,22 @@ const storage = multer.diskStorage({
   },
 });
 
-// Create the multer instance
-const upload = multer({ storage: storage }).array("idProof", 3); // Accept up to 3 ID proofs
+// Configure Multer to handle file uploads
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, "uploads/"); // Specify your upload directory
+    },
+    filename: (req, file, cb) => {
+      cb(null, `${Date.now()}-${file.originalname}`);
+    },
+  }),
+  limits: {
+    fileSize: 1024 * 1024 * 5, // Limit to 5MB
+  },
+}).fields([
+  { name: "idProof", maxCount: 3 }, // Expecting up to 3 files for idProof
+]);
 
 router.use(authenticate);
 

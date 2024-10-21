@@ -8,7 +8,7 @@ const userSchema = new Schema<IUser>(
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ["User", "Admin", "SuperAdmin"],
+      enum: ["User", "Admin", "SuperAdmin", "Tenant"], // Add "Tenant" role
       default: "User",
     },
     phoneNumber: { type: String },
@@ -24,7 +24,7 @@ const userSchema = new Schema<IUser>(
     resetCodeExpiration: { type: Date },
     activeStart: { type: Date },
     activeEnd: { type: Date },
-    registeredBy: { type: Schema.Types.ObjectId, ref: "User" }, // New field
+    registeredBy: { type: Schema.Types.ObjectId, ref: "User" }, // Field to store who registered the user
   },
   { timestamps: true }
 );

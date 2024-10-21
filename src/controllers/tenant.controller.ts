@@ -1,24 +1,26 @@
 import { Request, Response } from "express";
 
-import {
-  ApiResponse,
-  errorResponse,
-  successResponse,
-} from "../utils/apiResponse";
+import { errorResponse, successResponse } from "../utils/apiResponse";
 import { tenantService } from "../services/tenant.services";
 
 class TenantController {
   public async createTenant(req: Request, res: Response): Promise<void> {
     try {
       const files = req.files as Express.Multer.File[];
-      const newTenant = await tenantService.createTenant(req.body, files);
+      const tenantData = req.body;
+
+      // Create tenant and corresponding user
+      const newTenant = await tenantService.createTenant(tenantData, files);
+
       res
         .status(201)
-        .json(successResponse(newTenant, "Tenant created successfully"));
+        .json(
+          successResponse(newTenant, "Tenant and user created successfully")
+        );
     } catch (error: any) {
       res
         .status(500)
-        .json(errorResponse(error.message, "Failed to create tenant"));
+        .json(errorResponse(error.message, "Failed to create tenant and user"));
     }
   }
 

@@ -2,21 +2,42 @@ import { ITenant } from "../interfaces/tenant.interface";
 import { Tenant } from "../models/tenant.model";
 import fs from "fs";
 import path from "path";
+import bcrypt from "bcryptjs";
 import { Parser } from "json2csv";
 import { Document, Packer, Paragraph, TextRun } from "docx";
+import { User } from "../models/user.model";
+import { IUser } from "../interfaces/user.interface";
 
 class TenantService {
   public async createTenant(
     tenantData: Partial<ITenant>,
     files?: Express.Multer.File[]
   ): Promise<ITenant> {
-    const newTenant = new Tenant(tenantData);
+    // Hash the tenant's password before saving
+    const hashedPassword = await bcrypt.hash(tenantData.password!, 10);
+
+    // Create a new tenant in the tenant collection
+    const newTenant = new Tenant({
+      ...tenantData,
+      password: hashedPassword,
+    });
 
     if (files && files.length > 0) {
       newTenant.idProof = files.map((file) => file.filename);
     }
 
-    return await newTenant.save();
+    // Create a corresponding user with the "Tenant" role using tenant's contact information and password
+    const newUser: Partial<IUser> = {
+      name: tenantData.tenantName,
+      email: tenantData.contactInformation!.email,
+      password: hashedPassword,
+      role: "Tenant", // Assign the "Tenant" role
+    };
+
+    // Save the tenant's user in the User model
+    await new User(newUser).save();
+
+    return await newTenant.save(); // Save the tenant data
   }
 
   public async getAllTenants(query: any): Promise<{
