@@ -27,8 +27,8 @@ class AuthService {
       throw new Error("Invalid credentials");
     }
 
-    const token = this.generateToken(user, "1d");
-    const refreshToken = this.generateToken(user, "7d");
+    const token = this.generateToken(user, "1h");
+    const refreshToken = this.generateToken(user, "24h");
 
     return {
       token,
@@ -41,7 +41,7 @@ class AuthService {
   refreshToken(refreshToken: string) {
     try {
       const user = jwt.verify(refreshToken, process.env.JWT_SECRET as string);
-      const newAccessToken = this.generateToken(user, "1d");
+      const newAccessToken = this.generateToken(user, "1h");
       return newAccessToken;
     } catch (err) {
       throw new Error("Invalid refresh token");
