@@ -9,9 +9,47 @@ import { Parser } from "json2csv";
 class MaintenanceService {
   // Create a new maintenance request
   public async createMaintenance(
-    maintenanceData: Partial<IMaintenance>
+    maintenanceData: Partial<IMaintenance>,
+    photosOrVideos?: Express.Multer.File[]
   ): Promise<IMaintenance> {
-    const newMaintenance = new Maintenance(maintenanceData);
+    const {
+      user,
+      tenant,
+      property,
+      typeOfRequest,
+      description,
+      urgencyLevel,
+      preferredAccessTimes,
+      status,
+      assignedTo,
+      priorityLevel,
+      estimatedCompletionTime,
+      notes,
+    } = maintenanceData;
+
+    const newMaintenance = new Maintenance({
+      user,
+      tenant,
+      property,
+      typeOfRequest,
+      description,
+      urgencyLevel,
+      preferredAccessTimes,
+      status,
+      assignedTo,
+      priorityLevel,
+      estimatedCompletionTime,
+      notes,
+    });
+
+    console.log("Photos: ", photosOrVideos);
+
+    if (photosOrVideos && photosOrVideos.length > 0) {
+      newMaintenance.photosOrVideos = photosOrVideos.map(
+        (file) => file.filename
+      ); // Save all filenames
+    }
+
     return await newMaintenance.save();
   }
 

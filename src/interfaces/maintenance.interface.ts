@@ -1,6 +1,7 @@
 import { Document, Types } from "mongoose";
 
 export interface IMaintenance extends Document {
+  user: Types.ObjectId;
   tenant: Types.ObjectId;
   property: Types.ObjectId;
   typeOfRequest:

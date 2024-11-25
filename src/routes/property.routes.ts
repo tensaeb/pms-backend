@@ -24,7 +24,7 @@ router.use(authenticate);
 router.get("/report", admin, propertyController.generateReport);
 
 // Create a property
-router.post("/", superAdmin, upload, propertyController.createProperty);
+router.post("/", admin, upload, propertyController.createProperty);
 
 // GET properties (for all users)
 router.get("/", propertyController.getAllProperties);

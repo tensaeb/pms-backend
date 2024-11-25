@@ -7,16 +7,18 @@ class MaintenanceController {
   // Create a new maintenance request
   public async createMaintenance(req: Request, res: Response): Promise<void> {
     try {
+      const user = req.user;
       // Access the uploaded files and extract file paths
       const uploadedFiles = req.files as Express.Multer.File[];
 
       // Extract the file paths to store in the database
-      const filePaths = uploadedFiles.map((file) => file.path);
+      // const filePaths = uploadedFiles.map((file) => file.path);
 
       // Create maintenance request, including file paths
       const newMaintenance = await maintenanceService.createMaintenance({
         ...req.body,
-        photosOrVideos: filePaths, // Store the paths, not the entire file object
+        user: user,
+        photosOrVideos: uploadedFiles, // Store the paths, not the entire file object
       });
 
       res

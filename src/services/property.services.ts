@@ -13,6 +13,7 @@ class PropertyService {
     files?: Express.Multer.File[]
   ): Promise<IProperty> {
     const {
+      admin,
       title,
       description,
       address,
@@ -25,6 +26,7 @@ class PropertyService {
     } = propertyData;
 
     const newProperty = new Property({
+      admin,
       title,
       description,
       address,

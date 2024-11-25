@@ -3,6 +3,7 @@ import { IProperty } from "../interfaces/property.interface";
 
 const propertySchema = new Schema<IProperty>(
   {
+    admin: { type: Schema.Types.ObjectId, ref: "User", required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
     address: { type: String, required: true },

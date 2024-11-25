@@ -1,6 +1,7 @@
 import { Document, Schema } from "mongoose";
 
 export interface ITenant extends Document {
+  user: Schema.Types.ObjectId;
   tenantName: string;
   contactInformation: {
     email: string;

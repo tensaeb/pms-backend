@@ -1,6 +1,7 @@
-import { Document, Schema } from "mongoose";
+import { Document, Schema, Types } from "mongoose";
 
 export interface IProperty extends Document {
+  admin: Types.ObjectId;
   title: string;
   description: string;
   address: string;

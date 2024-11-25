@@ -12,9 +12,31 @@ class PropertyController {
   // Create a new property
   public async createProperty(req: Request, res: Response): Promise<void> {
     try {
+      // Ensure the logged-in user exists
+      const user = req.user;
+      if (!user || user.role !== "Admin") {
+        res
+          .status(403)
+          .json(
+            errorResponse("Unauthorized: Only admins can create properties")
+          );
+      }
+
       // Access the uploaded files
       const files = req.files as Express.Multer.File[]; // Use req.files
-      const newProperty = await propertyService.createProperty(req.body, files);
+
+      // Add the logged-in user as the admin
+      const propertyData = {
+        ...req.body,
+        admin: user, // Add the logged-in user as the admin
+      };
+
+      // Call the service to create the property
+      const newProperty = await propertyService.createProperty(
+        propertyData,
+        files
+      );
+
       res
         .status(201)
         .json(successResponse(newProperty, "Property created successfully"));
