@@ -23,6 +23,14 @@ router.get("/super-admin", authenticate, userController.getSuperAdminUsers);
 router.get("/user", authenticate, userController.getUsers);
 router.get("/", authenticate, userController.getAllUsers);
 
+// Update permissions
+router.put(
+  "/:userId/permissions",
+  authenticate,
+  admin,
+  userController.updatePermissions
+);
+
 router.get("/:id", authenticate, userController.getUserById);
 router.put("/:id", authenticate, userController.updateUserById);
 router.delete("/:id", authenticate, userController.deleteUser);

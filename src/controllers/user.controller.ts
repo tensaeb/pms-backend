@@ -222,6 +222,26 @@ class UserController {
         .json(errorResponse(error.message, "Failed to delete user"));
     }
   }
+
+  async updatePermissions(req: Request, res: Response): Promise<void> {
+    const { userId } = req.params;
+    const { permissions } = req.body; // Expect an object with permission keys and boolean values
+
+    try {
+      const updatedUser = await userService.updatePermissions(
+        userId,
+        permissions
+      );
+
+      res
+        .status(200)
+        .json(successResponse(updatedUser, "Permissions updated successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to update permissions"));
+    }
+  }
 }
 
 export const userController = new UserController();

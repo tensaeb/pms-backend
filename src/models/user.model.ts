@@ -25,6 +25,24 @@ const userSchema = new Schema<IUser>(
     activeStart: { type: Date },
     activeEnd: { type: Date },
     registeredBy: { type: Schema.Types.ObjectId, ref: "User" }, // Field to store who registered the user
+    permissions: {
+      addProperty: { type: Boolean, default: false },
+      editProperty: { type: Boolean, default: false },
+      deleteProperty: { type: Boolean, default: false },
+      viewProperty: { type: Boolean, default: false },
+      editPropertyPhotos: { type: Boolean, default: false },
+      addTenant: { type: Boolean, default: false },
+      editTenant: { type: Boolean, default: false },
+      deleteTenant: { type: Boolean, default: false },
+      editTenantPhotos: { type: Boolean, default: false },
+      addAgreement: { type: Boolean, default: false },
+      editAgreement: { type: Boolean, default: false },
+      deleteAgreement: { type: Boolean, default: false },
+      downloadAgreement: { type: Boolean, default: false },
+      addMaintenance: { type: Boolean, default: false },
+      editMaintenance: { type: Boolean, default: false },
+      deleteMaintenance: { type: Boolean, default: false },
+    },
   },
   { timestamps: true }
 );

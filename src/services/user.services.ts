@@ -229,6 +229,19 @@ class UserService {
     }
     return user;
   }
+
+  async updatePermissions(
+    userId: string,
+    permissions: Partial<IUser["permissions"]>
+  ): Promise<IUser | null> {
+    const user = await User.findById(userId);
+    if (!user) throw new Error("User not found");
+
+    user.permissions = { ...user.permissions, ...permissions };
+    await user.save();
+
+    return user;
+  }
 }
 
 export const userService = new UserService();

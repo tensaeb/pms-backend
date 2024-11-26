@@ -17,4 +17,22 @@ export interface IUser extends Document {
     type: typeof Schema.Types.ObjectId;
     ref: string;
   };
+  permissions: {
+    addProperty: boolean;
+    editProperty: boolean;
+    deleteProperty: boolean;
+    viewProperty: boolean;
+    editPropertyPhotos: boolean;
+    addTenant: boolean;
+    editTenant: boolean;
+    deleteTenant: boolean;
+    editTenantPhotos: boolean;
+    addAgreement: boolean;
+    editAgreement: boolean;
+    deleteAgreement: boolean;
+    downloadAgreement: boolean;
+    addMaintenance: boolean;
+    editMaintenance: boolean;
+    deleteMaintenance: boolean;
+  };
 }
