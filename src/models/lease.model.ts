@@ -3,6 +3,7 @@ import { ILease } from "../interfaces/lease.interface";
 
 const leaseSchema = new Schema<ILease>(
   {
+    user: { type: Schema.Types.ObjectId, ref: "User" },
     tenant: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     property: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     leaseStart: { type: Date, required: true },

@@ -1,8 +1,9 @@
-import { Document, Types } from "mongoose";
+import { Document, Schema, Types } from "mongoose";
 import { ITenant } from "./tenant.interface";
 import { IProperty } from "./property.interface";
 
 export interface ILease extends Document {
+  user: Schema.Types.ObjectId;
   tenant: Types.ObjectId | ITenant;
   property: Types.ObjectId | IProperty;
   leaseStart: Date;

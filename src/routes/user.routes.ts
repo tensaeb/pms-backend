@@ -33,6 +33,13 @@ router.put(
 
 router.get("/:id", authenticate, userController.getUserById);
 router.put("/:id", authenticate, userController.updateUserById);
+
+// Route to delete a user with all connections
+router.delete(
+  "/delete/:id",
+  authenticate,
+  userController.deleteUserWithConnections
+);
 router.delete("/:id", authenticate, userController.deleteUser);
 
 export default router;

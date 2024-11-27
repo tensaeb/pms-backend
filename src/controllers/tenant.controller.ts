@@ -7,10 +7,15 @@ class TenantController {
   public async createTenant(req: Request, res: Response): Promise<void> {
     try {
       const files = req.files as Express.Multer.File[];
+      const user = req.user;
       const tenantData = req.body;
 
       // Create tenant and corresponding user
-      const newTenant = await tenantService.createTenant(tenantData, files);
+      const newTenant = await tenantService.createTenant(
+        tenantData,
+        files,
+        user
+      );
 
       res
         .status(201)

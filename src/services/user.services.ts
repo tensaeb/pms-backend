@@ -2,6 +2,11 @@ import bcrypt from "bcryptjs";
 import fs from "fs";
 import { IUser } from "../interfaces/user.interface";
 import { User } from "../models/user.model";
+import { Lease } from "../models/lease.model";
+import { Maintenance } from "../models/maintenance.model";
+import { Property } from "../models/property.model";
+import { Tenant } from "../models/tenant.model";
+import { Types } from "mongoose";
 
 class UserService {
   // Create a SuperUser if the database is empty
@@ -85,7 +90,7 @@ class UserService {
     currentPage: number;
     totalUsers: number;
   }> {
-    const { page = 1, limit = 5, search = "", role, status } = query;
+    const { page = 1, limit = 20, search = "", role, status } = query;
 
     // Build the search query with optional filters
     const searchQuery: any = {
@@ -228,6 +233,39 @@ class UserService {
       fs.unlinkSync(user.photo);
     }
     return user;
+  }
+  public async deleteUserWithConnections(userId: string): Promise<void> {
+    try {
+      // Fetch the user to ensure it exists
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error(`User with ID ${userId} not found`);
+      }
+
+      // Find and delete all entities referencing the user
+      await Lease.deleteMany({ $or: [{ user: userId }, { tenant: userId }] });
+      await Maintenance.deleteMany({ user: userId });
+      await Property.deleteMany({ admin: userId });
+      await Tenant.deleteMany({ user: userId });
+
+      // Find connected users and delete recursively
+      const connectedUsers = await User.find({ registeredBy: userId });
+      for (const connectedUser of connectedUsers) {
+        const connectedUserId =
+          connectedUser._id instanceof Types.ObjectId
+            ? connectedUser._id.toString()
+            : (connectedUser._id as string);
+
+        await this.deleteUserWithConnections(connectedUserId); // Recursive call
+      }
+
+      // Delete the user
+      await User.findByIdAndDelete(userId);
+    } catch (error: any) {
+      // Log the error to track issues in the service
+      console.error(`Failed to delete user ${userId}:`, error.message);
+      throw error; // Rethrow the error to be handled by the controller
+    }
   }
 
   async updatePermissions(

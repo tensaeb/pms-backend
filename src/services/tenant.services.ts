@@ -7,11 +7,13 @@ import { Parser } from "json2csv";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { User } from "../models/user.model";
 import { IUser } from "../interfaces/user.interface";
+import { DecodedToken } from "../middlewares/authMiddleware";
 
 class TenantService {
   public async createTenant(
     tenantData: Partial<ITenant>,
-    files?: Express.Multer.File[]
+    files?: Express.Multer.File[],
+    user?: DecodedToken
   ): Promise<ITenant> {
     // Hash the tenant's password before saving
     const hashedPassword = await bcrypt.hash(tenantData.password!, 10);
@@ -20,6 +22,7 @@ class TenantService {
     const newTenant = new Tenant({
       ...tenantData,
       password: hashedPassword,
+      user,
     });
 
     if (files && files.length > 0) {

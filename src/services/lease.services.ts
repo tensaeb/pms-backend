@@ -6,13 +6,15 @@ import { Parser } from "json2csv";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { ITenant } from "../interfaces/tenant.interface";
 import { IProperty } from "../interfaces/property.interface";
+import { DecodedToken } from "../middlewares/authMiddleware";
 
 class LeaseService {
   public async createLease(
     leaseData: Partial<ILease>,
-    files?: Express.Multer.File[]
+    files?: Express.Multer.File[],
+    user?: DecodedToken
   ): Promise<ILease> {
-    const newLease = new Lease(leaseData);
+    const newLease = new Lease({ ...leaseData, user: user });
 
     if (files && files.length > 0) {
       newLease.documents = files.map((file) => file.filename);

@@ -1,12 +1,25 @@
 import { Request, Response } from "express";
 import { errorResponse, successResponse } from "../utils/apiResponse";
 import { leaseService } from "../services/lease.services";
+import { User } from "../models/user.model";
 
 class LeaseController {
   public async createLease(req: Request, res: Response): Promise<void> {
     try {
+      const user = req.user;
       const files = req.files as Express.Multer.File[];
-      const newLease = await leaseService.createLease(req.body, files);
+      const newLease = await leaseService.createLease(req.body, files, user);
+
+      // Check if the email already exists
+      const existingUser = await User.findOne({ email: req.body.email });
+      if (existingUser) {
+        res.status(400).json({ message: "Email already exists" });
+      }
+
+      if (!user) {
+        res.status(400).json({ message: "User not authorized" });
+      }
+
       res
         .status(201)
         .json(successResponse(newLease, "Lease created successfully"));

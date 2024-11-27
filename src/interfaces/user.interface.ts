@@ -24,6 +24,7 @@ export interface IUser extends Document {
     viewProperty: boolean;
     editPropertyPhotos: boolean;
     addTenant: boolean;
+    addTenantRequest: boolean;
     editTenant: boolean;
     deleteTenant: boolean;
     editTenantPhotos: boolean;
@@ -31,7 +32,7 @@ export interface IUser extends Document {
     editAgreement: boolean;
     deleteAgreement: boolean;
     downloadAgreement: boolean;
-    addMaintenance: boolean;
+    addMaintenanceRecord: boolean;
     editMaintenance: boolean;
     deleteMaintenance: boolean;
   };

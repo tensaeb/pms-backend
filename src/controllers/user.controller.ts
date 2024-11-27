@@ -223,6 +223,37 @@ class UserController {
     }
   }
 
+  // Delete user with all connections
+  public async deleteUserWithConnections(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        res
+          .status(400)
+          .json(errorResponse("User ID is missing", "User ID is required"));
+      }
+
+      // Call the service to delete the user and their connections
+      await userService.deleteUserWithConnections(id);
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            "User deleted successfully",
+            "User and all connections deleted successfully"
+          )
+        );
+    } catch (error) {
+      next(error); // Pass error to the error-handling middleware
+    }
+  }
+
   async updatePermissions(req: Request, res: Response): Promise<void> {
     const { userId } = req.params;
     const { permissions } = req.body; // Expect an object with permission keys and boolean values
