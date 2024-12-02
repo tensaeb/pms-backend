@@ -1,7 +1,8 @@
-import { Document, Schema } from "mongoose";
+import { Document, Schema, Types } from "mongoose";
+import { IUser } from "./user.interface";
 
 export interface ITenant extends Document {
-  user: Schema.Types.ObjectId;
+  user: Types.ObjectId | IUser;
   tenantName: string;
   contactInformation: {
     email: string;

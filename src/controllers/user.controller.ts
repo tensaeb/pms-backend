@@ -5,6 +5,7 @@ import {
   successResponse,
 } from "../utils/apiResponse";
 import { userService } from "../services/user.services";
+import path from "path";
 
 class UserController {
   // Create a SuperUser if the database is empty
@@ -190,6 +191,57 @@ class UserController {
       res
         .status(500)
         .json(errorResponse(error.message, "Failed to fetch user"));
+    }
+  }
+
+  async getPhoto(req: Request, res: Response): Promise<void> {
+    try {
+      const user = await userService.getUserById(req.params.id);
+      if (!user || !user.photo) {
+        res.status(404).json(errorResponse("Photo not found"));
+        return;
+      }
+
+      res.sendFile(path.resolve(user.photo));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to retrieve photo"));
+    }
+  }
+
+  async uploadPhoto(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.file) {
+        res.status(400).json(errorResponse("No file uploaded"));
+        return;
+      }
+
+      const updatedUser = await userService.updateUserPhoto(
+        req.params.id,
+        req.file
+      );
+      res
+        .status(200)
+        .json(successResponse(updatedUser, "Photo uploaded successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to upload photo"));
+    }
+  }
+
+  // Delete user photo
+  async deletePhoto(req: Request, res: Response): Promise<void> {
+    try {
+      const updatedUser = await userService.removeUserPhoto(req.params.id);
+      res
+        .status(200)
+        .json(successResponse(updatedUser, "Photo deleted successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to delete photo"));
     }
   }
 

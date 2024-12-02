@@ -1,4 +1,9 @@
-import { Document, Schema, Types } from "mongoose";
+import { Document, Types } from "mongoose";
+
+export interface IPhoto {
+  id: string;
+  url: string;
+}
 
 export interface IProperty extends Document {
   admin: Types.ObjectId;
@@ -11,7 +16,7 @@ export interface IProperty extends Document {
   propertyType: string;
   floorPlan?: string;
   amenities?: string[];
-  photos: string[];
+  photos: IPhoto[];
   createdAt: Date;
   updatedAt: Date;
 }

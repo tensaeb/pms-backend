@@ -44,7 +44,7 @@ class TenantService {
   }
 
   public async getAllTenants(query: any): Promise<{
-    tenants: Partial<ITenant>[];
+    tenants: Partial<ITenant & { tenantUser?: IUser }>[];
     totalPages: number;
     currentPage: number;
     totalTenants: number;
@@ -56,9 +56,23 @@ class TenantService {
     };
 
     const tenants = await Tenant.find(searchQuery)
-      .populate("propertyInformation.propertyId")
+      .populate("propertyInformation")
+      .populate("user") // Keep this to show the creator of the tenant
       .skip((page - 1) * limit)
-      .limit(Number(limit));
+      .limit(Number(limit))
+      .lean();
+
+    // Fetch tenantUser for each tenant based on their email
+    // Fetch tenantUser for each tenant based on their email
+    for (const tenant of tenants) {
+      const tenantUser = await User.findOne({
+        email: tenant.contactInformation.email,
+      }).lean();
+
+      if (tenantUser) {
+        (tenant as any).tenantUser = tenantUser; // Add tenantUser data to the tenant object
+      }
+    }
 
     const totalTenants = await Tenant.countDocuments(searchQuery);
 
@@ -70,8 +84,28 @@ class TenantService {
     };
   }
 
-  public async getTenantById(id: string): Promise<ITenant | null> {
-    return await Tenant.findById(id).populate("propertyInformation.propertyId");
+  public async getTenantById(
+    id: string
+  ): Promise<(ITenant & { tenantUser?: IUser }) | null> {
+    const tenant = await Tenant.findById(id)
+      .populate("propertyInformation")
+      .populate("user") // Keep this to show the creator of the tenant
+      .lean();
+
+    if (!tenant) {
+      return null;
+    }
+
+    // Fetch tenantUser based on the tenant's email
+    const tenantUser = await User.findOne({
+      email: tenant.contactInformation.email,
+    }).lean();
+
+    if (tenantUser) {
+      (tenant as any).tenantUser = tenantUser; // Add tenantUser data to the tenant object
+    }
+
+    return tenant;
   }
 
   public async updateTenant(

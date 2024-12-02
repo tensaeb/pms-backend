@@ -4,11 +4,11 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
+  photo?: string;
   role: "User" | "Admin" | "SuperAdmin" | "Tenant";
   phoneNumber?: string;
   address?: string;
   status: "active" | "inactive";
-  photo?: string;
   resetCode?: string;
   resetCodeExpiration?: Date;
   activeStart?: Date;

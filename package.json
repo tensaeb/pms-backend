@@ -20,7 +20,7 @@
     "@types/multer": "^1.4.12",
     "@types/nodemailer": "^6.4.16",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.6.3"
+    "typescript": "^5.7.2"
   },
   "dependencies": {
     "@json2csv/plainjs": "^7.0.6",
@@ -37,6 +37,8 @@
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.15",
     "nodemon": "^3.1.7",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "sharp": "^0.33.5",
+    "uuid": "^11.0.3"
   }
 }

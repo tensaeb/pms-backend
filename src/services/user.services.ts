@@ -10,7 +10,10 @@ import { Types } from "mongoose";
 
 class UserService {
   // Create a SuperUser if the database is empty
-  public async createSuperUser(userData: Partial<IUser>): Promise<IUser> {
+  public async createSuperUser(
+    userData: Partial<IUser>,
+    file?: Express.Multer.File
+  ): Promise<IUser> {
     const userCount = await User.countDocuments(); // Check if there are any users in the database
 
     if (userCount > 0) {
@@ -34,7 +37,7 @@ class UserService {
       email,
       password: hashedPassword,
       role: "SuperAdmin", // Assign the SuperAdmin role
-      status: "Active",
+      status: "active",
       registeredBy: null, // No one is registering this SuperUser manually
     });
 
@@ -191,10 +194,13 @@ class UserService {
       role: "Admin",
     };
 
+    // Include activeStart and activeEnd in the selected fields
     const users = await User.find(searchQuery)
       .skip((page - 1) * limit)
       .limit(limit)
-      .select("name email phoneNumber role photo status address");
+      .select(
+        "name email phoneNumber role photo status address activeStart activeEnd"
+      );
 
     const totalUsers = await User.countDocuments(searchQuery);
 
@@ -279,6 +285,57 @@ class UserService {
     await user.save();
 
     return user;
+  }
+
+  async updateUserPhoto(userId: string, file: Express.Multer.File) {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Delete old photo if exists
+      if (user.photo) {
+        await this.deletePhotoFile(user.photo);
+      }
+
+      // Update with new photo
+      user.photo = file.path;
+      await user.save();
+      return user;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async removeUserPhoto(userId: string) {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (user.photo) {
+        await this.deletePhotoFile(user.photo);
+        user.photo = undefined;
+        await user.save();
+      }
+
+      return user;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  private async deletePhotoFile(photoPath: string) {
+    try {
+      if (fs.existsSync(photoPath)) {
+        await fs.promises.unlink(photoPath);
+      }
+    } catch (error) {
+      console.error("Error deleting photo file:", error);
+      throw error;
+    }
   }
 }
 

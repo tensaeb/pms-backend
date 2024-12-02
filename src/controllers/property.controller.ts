@@ -12,7 +12,6 @@ class PropertyController {
   // Create a new property
   public async createProperty(req: Request, res: Response): Promise<void> {
     try {
-      // Ensure the logged-in user exists
       const user = req.user;
       if (!user || user.role !== "Admin") {
         res
@@ -20,18 +19,12 @@ class PropertyController {
           .json(
             errorResponse("Unauthorized: Only admins can create properties")
           );
+        return;
       }
 
-      // Access the uploaded files
-      const files = req.files as Express.Multer.File[]; // Use req.files
+      const files = req.files as Express.Multer.File[];
+      const propertyData = { ...req.body, admin: user };
 
-      // Add the logged-in user as the admin
-      const propertyData = {
-        ...req.body,
-        admin: user, // Add the logged-in user as the admin
-      };
-
-      // Call the service to create the property
       const newProperty = await propertyService.createProperty(
         propertyData,
         files
@@ -81,7 +74,7 @@ class PropertyController {
   // Update a property by ID
   public async updateProperty(req: Request, res: Response): Promise<void> {
     try {
-      const file = req.file;
+      const file = req.file ? [req.file] : undefined;
       const updatedProperty = await propertyService.updateProperty(
         req.params.id,
         req.body,
@@ -148,6 +141,49 @@ class PropertyController {
       res
         .status(500)
         .json(errorResponse(error.message, "Failed to generate report"));
+    }
+  }
+
+  // Edit a photo
+  public async editPhoto(req: Request, res: Response): Promise<void> {
+    try {
+      const { propertyId, photoId } = req.params;
+      const { newUrl } = req.body;
+
+      if (!newUrl) {
+        res.status(400).json({ message: "New URL is required" });
+        return;
+      }
+
+      const updatedProperty = await propertyService.editPhoto(
+        propertyId,
+        photoId,
+        newUrl
+      );
+
+      res
+        .status(200)
+        .json({ message: "Photo updated successfully", data: updatedProperty });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  // Delete a photo
+  public async deletePhoto(req: Request, res: Response): Promise<void> {
+    try {
+      const { propertyId, photoId } = req.params;
+
+      const updatedProperty = await propertyService.deletePhoto(
+        propertyId,
+        photoId
+      );
+
+      res
+        .status(200)
+        .json({ message: "Photo deleted successfully", data: updatedProperty });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   }
 }

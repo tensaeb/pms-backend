@@ -11,6 +11,7 @@ const userSchema = new Schema<IUser>(
       enum: ["User", "Admin", "SuperAdmin", "Tenant"], // Add "Tenant" role
       default: "User",
     },
+    photo: { type: String, default: "" },
     phoneNumber: { type: String },
     address: { type: String },
     status: {
@@ -19,7 +20,6 @@ const userSchema = new Schema<IUser>(
       default: "active",
       set: (val: string) => val.toLowerCase(), // Convert input to lowercase
     },
-    photo: { type: String },
     resetCode: { type: String },
     resetCodeExpiration: { type: Date },
     activeStart: { type: Date },

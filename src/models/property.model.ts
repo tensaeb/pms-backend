@@ -1,5 +1,10 @@
 import { Schema, model } from "mongoose";
-import { IProperty } from "../interfaces/property.interface";
+import { IPhoto, IProperty } from "../interfaces/property.interface";
+
+const photoSchema = new Schema<IPhoto>({
+  id: { type: String, required: true },
+  url: { type: String, required: true },
+});
 
 const propertySchema = new Schema<IProperty>(
   {
@@ -13,13 +18,7 @@ const propertySchema = new Schema<IProperty>(
     propertyType: { type: String, required: true },
     floorPlan: { type: String },
     amenities: [String],
-    photos: {
-      type: [String],
-      validate: [
-        (val: string[]) => val.length <= 5,
-        "Exceeds the limit of 5 photos",
-      ],
-    },
+    photos: { type: [photoSchema], default: [] },
   },
   { timestamps: true }
 );
