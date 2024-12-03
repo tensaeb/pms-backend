@@ -50,6 +50,12 @@ router.post(
   userController.createUser
 );
 
+router.get(
+  "/registered-users",
+  authenticate,
+  userController.getUsersRegisteredBy
+);
+
 router.post("/:id/photo", uploadMiddleware, userController.uploadPhoto);
 router.delete("/:id/photo", authenticate, userController.deletePhoto);
 router.get("/:id/photo", userController.getPhoto);
@@ -60,6 +66,7 @@ router.get("/super-admin", authenticate, userController.getSuperAdminUsers);
 router.get("/user", authenticate, userController.getUsers);
 router.get("/", authenticate, userController.getAllUsers);
 router.get("/:userId/permissions", userController.updatePermissions);
+router.get("/all-items", authenticate, userController.getUserItems);
 
 // Update permissions
 router.put("/:userId/permissions", userController.updatePermissions);

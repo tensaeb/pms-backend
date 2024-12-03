@@ -232,6 +232,31 @@ class UserService {
     return updatedUser;
   }
 
+  async getUsersRegisteredBy(loggedInUserId: string): Promise<IUser[]> {
+    if (!loggedInUserId) {
+      throw new Error("Logged-in user ID is required");
+    }
+
+    return await User.find({ registeredBy: loggedInUserId }).select(
+      "name email phoneNumber role status address"
+    );
+  }
+
+  //Items created by user
+  async fetchUserItems(userId: string) {
+    const tenants = await Tenant.find({ user: userId });
+    const properties = await Property.find({ admin: userId });
+    const maintenanceRequests = await Maintenance.find({ user: userId });
+    const leases = await Lease.find({ user: userId });
+
+    return {
+      tenants,
+      properties,
+      maintenanceRequests,
+      leases,
+    };
+  }
+
   // Delete user
   async deleteUser(id: string) {
     const user = await User.findByIdAndDelete(id);

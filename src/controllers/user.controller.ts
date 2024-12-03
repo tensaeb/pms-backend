@@ -210,6 +210,47 @@ class UserController {
     }
   }
 
+  public async getUsersRegisteredBy(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const loggedInUserId = req.user?.id;
+
+      if (!loggedInUserId) {
+        res.status(401).json(errorResponse("Unauthorized"));
+        return;
+      }
+
+      const users = await userService.getUsersRegisteredBy(loggedInUserId);
+      res
+        .status(200)
+        .json(successResponse(users, "Users fetched successfully"));
+    } catch (error: any) {
+      res.status(500).json(errorResponse(error.message));
+    }
+  }
+
+  async getUserItems(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        res.status(401).json(errorResponse("Unauthorized"));
+        return;
+      }
+
+      const items = await userService.fetchUserItems(userId); // Added await here
+      res
+        .status(200)
+        .json(successResponse(items, "User items fetched successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to fetch user items"));
+    }
+  }
+
   async uploadPhoto(req: Request, res: Response): Promise<void> {
     try {
       if (!req.file) {
