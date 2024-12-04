@@ -67,6 +67,19 @@ class PropertyService {
     return await newProperty.save();
   }
 
+  public async getPropertyPhoto(
+    propertyId: string,
+    photoId: string
+  ): Promise<IPhoto | null> {
+    const property = await Property.findById(propertyId);
+    if (!property) throw new Error("Property not found");
+
+    const photo = property.photos.find((p) => p.id === photoId);
+    if (!photo) throw new Error("Photo not found");
+
+    return photo;
+  }
+
   public async editPhoto(
     propertyId: string,
     photoId: string,

@@ -37,13 +37,13 @@ const upload = multer({
 
 router.use(authenticate);
 
-router.get("/report", admin, propertyController.generateReport);
-router.post("/", admin, upload, propertyController.createProperty);
+router.get("/report", propertyController.generateReport);
+router.post("/", upload, propertyController.createProperty);
 router.put("/:propertyId/photos/:photoId", propertyController.editPhoto);
 router.delete("/:propertyId/photos/:photoId", propertyController.deletePhoto);
 router.get("/", propertyController.getAllProperties);
 router.get("/:id", propertyController.getPropertyById);
-router.put("/:id", admin, upload, propertyController.updateProperty);
-router.delete("/:id", admin, propertyController.deleteProperty);
+router.put("/:id", upload, propertyController.updateProperty);
+router.delete("/:id", propertyController.deleteProperty);
 
 export default router;
