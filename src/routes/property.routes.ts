@@ -39,8 +39,16 @@ router.use(authenticate);
 
 router.get("/report", propertyController.generateReport);
 router.post("/", upload, propertyController.createProperty);
+
+// Fetch all images from a property
+router.get("/:propertyId/images", propertyController.fetchAllImages);
+
+// Fetch a single image from a property
+router.get("/:propertyId/images/:imageId", propertyController.fetchSingleImage);
+
 router.put("/:propertyId/photos/:photoId", propertyController.editPhoto);
 router.delete("/:propertyId/photos/:photoId", propertyController.deletePhoto);
+
 router.get("/", propertyController.getAllProperties);
 router.get("/:id", propertyController.getPropertyById);
 router.put("/:id", upload, propertyController.updateProperty);

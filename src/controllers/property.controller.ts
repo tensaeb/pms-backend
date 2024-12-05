@@ -40,6 +40,26 @@ class PropertyController {
     }
   }
 
+  async fetchAllImages(req: Request, res: Response): Promise<void> {
+    try {
+      const { propertyId } = req.params;
+      const images = await propertyService.getAllImages(propertyId);
+      res.status(200).json({ success: true, images });
+    } catch (error: any) {
+      res.status(404).json({ success: false, message: error.message });
+    }
+  }
+
+  async fetchSingleImage(req: Request, res: Response): Promise<void> {
+    try {
+      const { propertyId, imageId } = req.params;
+      const image = await propertyService.getImage(propertyId, imageId);
+      res.status(200).json({ success: true, image });
+    } catch (error: any) {
+      res.status(404).json({ success: false, message: error.message });
+    }
+  }
+
   // Get all properties with pagination and search
   public async getAllProperties(req: Request, res: Response): Promise<void> {
     try {

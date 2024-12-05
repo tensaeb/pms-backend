@@ -67,17 +67,24 @@ class PropertyService {
     return await newProperty.save();
   }
 
-  public async getPropertyPhoto(
-    propertyId: string,
-    photoId: string
-  ): Promise<IPhoto | null> {
-    const property = await Property.findById(propertyId);
-    if (!property) throw new Error("Property not found");
+  async getAllImages(propertyId: string): Promise<IPhoto[]> {
+    const property = await Property.findById(propertyId).select("photos");
+    if (!property) {
+      throw new Error("Property not found");
+    }
+    return property.photos || [];
+  }
 
-    const photo = property.photos.find((p) => p.id === photoId);
-    if (!photo) throw new Error("Photo not found");
-
-    return photo;
+  async getImage(propertyId: string, imageId: string): Promise<IPhoto | null> {
+    const property = await Property.findById(propertyId).select("photos");
+    if (!property) {
+      throw new Error("Property not found");
+    }
+    const image = property.photos.find((img: IPhoto) => img.id === imageId);
+    if (!image) {
+      throw new Error("Image not found");
+    }
+    return image;
   }
 
   public async editPhoto(
