@@ -5,6 +5,11 @@ const maintenanceSchema = new Schema<IMaintenance>(
   {
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     tenant: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
+    mainteneceUser: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
+    },
     property: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     typeOfRequest: {
       type: String,
@@ -12,10 +17,6 @@ const maintenanceSchema = new Schema<IMaintenance>(
       required: true,
     },
     description: { type: String, required: true },
-    photosOrVideos: {
-      type: [String],
-      validate: [arrayLimit, "Exceeds the limit of 4 files"],
-    },
     urgencyLevel: {
       type: String,
       enum: ["Urgent", "Routine", "Non-Urgent"],
@@ -24,13 +25,28 @@ const maintenanceSchema = new Schema<IMaintenance>(
     preferredAccessTimes: { type: String },
     status: {
       type: String,
-      enum: ["Pending", "In Progress", "Completed", "Cancelled"],
+      enum: [
+        "Pending",
+        "In Progress",
+        "Completed",
+        "Cancelled",
+        "Inspected",
+        "Incomplete",
+      ],
       default: "Pending",
     },
     assignedTo: { type: String },
     priorityLevel: { type: String, enum: ["Low", "Medium", "High"] },
     estimatedCompletionTime: { type: Date },
     notes: { type: String },
+    requestedFiles: {
+      type: [String],
+      validate: [arrayLimit, "Exceeds the limit of 4 files"],
+    },
+    inpectedFiles: {
+      type: [String],
+      validate: [arrayLimit, "Exceeds the limit of 4 files"],
+    },
   },
   { timestamps: true }
 );

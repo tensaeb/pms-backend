@@ -13,14 +13,14 @@ class PropertyController {
   public async createProperty(req: Request, res: Response): Promise<void> {
     try {
       const user = req.user;
-      if (!user || user.role !== "Admin") {
-        res
-          .status(403)
-          .json(
-            errorResponse("Unauthorized: Only admins can create properties")
-          );
-        return;
-      }
+      // if (!user || user.role !== "Admin") {
+      //   res
+      //     .status(403)
+      //     .json(
+      //       errorResponse("Unauthorized: Only admins can create properties")
+      //     );
+      //   return;
+      // }
 
       const files = req.files as Express.Multer.File[];
       const propertyData = { ...req.body, admin: user };
@@ -94,11 +94,11 @@ class PropertyController {
   // Update a property by ID
   public async updateProperty(req: Request, res: Response): Promise<void> {
     try {
-      const file = req.file ? [req.file] : undefined;
+      const files = req.files as Express.Multer.File[] | undefined;
       const updatedProperty = await propertyService.updateProperty(
         req.params.id,
         req.body,
-        file
+        files
       );
       res
         .status(200)
@@ -131,13 +131,13 @@ class PropertyController {
     try {
       const { startDate, endDate } = req.query;
 
-      // Validate startDate and endDate
-      if (!startDate || !endDate) {
-        res
-          .status(400)
-          .json(errorResponse("Start date and end date are required"));
-        return;
-      }
+      // // Validate startDate and endDate
+      // if (!startDate || !endDate) {
+      //   res
+      //     .status(400)
+      //     .json(errorResponse("Start date and end date are required"));
+      //   return;
+      // }
 
       // Generate the report and get file paths along with the properties
       const { csvPath, wordPath, properties } =

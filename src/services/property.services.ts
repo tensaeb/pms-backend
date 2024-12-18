@@ -199,15 +199,20 @@ class PropertyService {
   }
 
   public async generateReport(
-    startDate: string,
-    endDate: string
+    startDate?: string,
+    endDate?: string
   ): Promise<{ csvPath: string; wordPath: string; properties: IProperty[] }> {
-    const properties = await Property.find({
-      createdAt: {
+    // Construct the query filter
+    const filter: any = {};
+    if (startDate && endDate) {
+      filter.createdAt = {
         $gte: new Date(startDate),
         $lte: new Date(endDate),
-      },
-    }).lean();
+      };
+    }
+
+    // Fetch properties based on the filter
+    const properties = await Property.find(filter).lean();
 
     if (!properties.length) {
       throw new Error("No properties found for the given date range");

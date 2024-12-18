@@ -48,7 +48,7 @@ router.get("/report", admin, maintenanceController.generateReport);
 // Create a new maintenance request
 router.post(
   "/",
-  upload.array("photosOrVideos", 5),
+  upload.array("requestedFiles", 5),
   maintenanceController.createMaintenance
 );
 
@@ -65,7 +65,7 @@ router.get("/:id", maintenanceController.getMaintenanceById);
 // Update a maintenance request
 router.put(
   "/:id",
-  upload.array("photosOrVideos", 5),
+  upload.array("requestedFiles", 5),
   maintenanceController.updateMaintenance
 );
 

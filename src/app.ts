@@ -2,6 +2,7 @@ import bodyParser from "body-parser";
 import express, { Application, Request, Response } from "express";
 import router from "./routes";
 import cors from "cors";
+import path from "path";
 import { connectDB } from "./config/db";
 
 class App {

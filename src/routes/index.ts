@@ -9,6 +9,7 @@ import tenantRoutes from "./tenant.routes";
 import leaseRoutes from "./lease.route";
 import rentInvoiceRoutes from "./rentInvoice.routes";
 import maintenanceRoutes from "./maintenance.route";
+import reportRoutes from "./report.routes";
 
 const router: Router = express.Router();
 
@@ -20,11 +21,13 @@ const storage: StorageEngine = multer.diskStorage({
     cb: (error: Error | null, destination: string) => void
   ) {
     if (file.fieldname === "receipt") {
-      cb(null, "receipts/");
+      cb(null, path.join("uploads", "receipts")); // receipts now has its own sub folder
     } else if (file.fieldname === "idProof") {
-      cb(null, "uploads/ids/");
+      cb(null, path.join("uploads", "ids")); // ids now has its own sub folder
+    } else if (file.fieldname === "photos") {
+      cb(null, path.join("uploads", "properties")); // files coming from the property routes are stored in here
     } else {
-      cb(null, "uploads/");
+      cb(null, "uploads");
     }
   },
   filename(
@@ -32,7 +35,8 @@ const storage: StorageEngine = multer.diskStorage({
     file: Express.Multer.File,
     cb: (error: Error | null, filename: string) => void
   ) {
-    cb(null, `${Date.now()}-${file.originalname}`);
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `${uniqueSuffix}${path.extname(file.originalname)}`);
   },
 });
 
@@ -65,7 +69,14 @@ router.post(
 
 // Static folder for file uploads
 router.use("/uploads", express.static(path.join(__dirname, "uploads")));
-router.use("/receipts", express.static(path.join(__dirname, "receipts"))); // Serve receipts
+router.use(
+  "/uploads/receipts",
+  express.static(path.join(__dirname, "uploads", "receipts"))
+); // Serve receipts from the sub folder
+router.use(
+  "/uploads/properties",
+  express.static(path.join(process.cwd(), "uploads", "properties"))
+);
 
 // API routes
 router.use("/auth", authRoutes);
@@ -75,5 +86,6 @@ router.use("/tenants", tenantRoutes);
 router.use("/lease", leaseRoutes);
 router.use("/rent-invoices", rentInvoiceRoutes);
 router.use("/maintenances", maintenanceRoutes);
+router.use("/reports", reportRoutes);
 
 export default router;

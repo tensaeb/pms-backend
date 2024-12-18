@@ -60,7 +60,7 @@ class TenantController {
 
   public async updateTenant(req: Request, res: Response): Promise<void> {
     try {
-      const files = req.files as Express.Multer.File[];
+      const files = req.files as Express.Multer.File[] | undefined;
       const updatedTenant = await tenantService.updateTenant(
         req.params.id,
         req.body,

@@ -50,6 +50,6 @@ router.get("/:id", tenantController.getTenantById);
 router.put("/:id", admin, upload, tenantController.updateTenant);
 
 // DELETE tenant by ID
-router.delete("/:id", admin, tenantController.deleteTenant);
+router.delete("/:id", tenantController.deleteTenant);
 
 export default router;

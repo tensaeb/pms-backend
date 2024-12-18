@@ -18,7 +18,7 @@ class MaintenanceController {
       const newMaintenance = await maintenanceService.createMaintenance({
         ...req.body,
         user: user,
-        photosOrVideos: uploadedFiles, // Store the paths, not the entire file object
+        requestedFiles: uploadedFiles, // Store the paths, not the entire file object
       });
 
       res

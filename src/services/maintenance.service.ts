@@ -10,7 +10,7 @@ class MaintenanceService {
   // Create a new maintenance request
   public async createMaintenance(
     maintenanceData: Partial<IMaintenance>,
-    photosOrVideos?: Express.Multer.File[]
+    requestedFiles?: Express.Multer.File[]
   ): Promise<IMaintenance> {
     const {
       user,
@@ -42,10 +42,8 @@ class MaintenanceService {
       notes,
     });
 
-    console.log("Photos: ", photosOrVideos);
-
-    if (photosOrVideos && photosOrVideos.length > 0) {
-      newMaintenance.photosOrVideos = photosOrVideos.map(
+    if (requestedFiles && requestedFiles.length > 0) {
+      newMaintenance.requestedFiles = requestedFiles.map(
         (file) => file.filename
       ); // Save all filenames
     }
