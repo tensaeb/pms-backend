@@ -5,7 +5,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   photo?: string;
-  role: "User" | "Admin" | "SuperAdmin" | "Tenant";
+  role: "User" | "Admin" | "SuperAdmin" | "Tenant" | "Maintainer" | "Inspector";
   phoneNumber?: string;
   address?: string;
   status: "active" | "inactive";
@@ -17,6 +17,7 @@ export interface IUser extends Document {
     type: typeof Schema.Types.ObjectId;
     ref: string;
   };
+  maintenanceSkills: [string];
   permissions: {
     addProperty: boolean;
     editProperty: boolean;

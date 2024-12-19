@@ -8,7 +8,14 @@ const userSchema = new Schema<IUser>(
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ["User", "Admin", "SuperAdmin", "Tenant"], // Add "Tenant" role
+      enum: [
+        "User",
+        "Admin",
+        "SuperAdmin",
+        "Tenant",
+        "Maintainer",
+        "Inspector",
+      ],
       default: "User",
     },
     photo: { type: String, default: "" },
@@ -25,6 +32,11 @@ const userSchema = new Schema<IUser>(
     activeStart: { type: Date },
     activeEnd: { type: Date },
     registeredBy: { type: Schema.Types.ObjectId, ref: "User" }, // Field to store who registered the user
+    maintenanceSkills: {
+      type: [String],
+      enum: ["Plumbing", "Electrical", "HVAC", "Appliance Repair", "Other"],
+      default: [],
+    },
     permissions: {
       addProperty: { type: Boolean, default: false },
       editProperty: { type: Boolean, default: false },

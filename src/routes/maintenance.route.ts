@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import { maintenanceController } from "../controllers/maintenance.controller";
 import { admin, authenticate } from "../middlewares/authMiddleware";
+import path from "path";
 
 const router = express.Router();
 
@@ -41,7 +42,6 @@ const upload = multer({
 });
 
 router.use(authenticate);
-
 // Route for generating maintenance report
 router.get("/report", admin, maintenanceController.generateReport);
 
@@ -49,15 +49,37 @@ router.get("/report", admin, maintenanceController.generateReport);
 router.post(
   "/",
   upload.array("requestedFiles", 5),
-  maintenanceController.createMaintenance
+  maintenanceController.createMaintenanceRequest
 );
 
-// Get all maintenance requests
+// Approve a maintenance request
+router.put(
+  "/approve/:id",
+  admin,
+  maintenanceController.approveMaintenanceRequest
+);
+
+// Assign a maintainer to a maintenance request
+router.put("/assign/:id", admin, maintenanceController.assignMaintainer);
+
+// Get all maintenance requests assigned to a maintainer
 router.get(
-  "/",
-
-  maintenanceController.getAllMaintenanceRequests
+  "/maintainer/:maintainerId",
+  maintenanceController.getMaintenancesByMaintainer
 );
+// Get list of maintainers
+router.get("/maintainers", admin, maintenanceController.getMaintainersList);
+
+// Maintainer submits maintenance expense
+router.put("/expense/:id", maintenanceController.submitMaintenanceExpense);
+// Inspector Inspects Maintenance and mark as inspected
+router.put(
+  "/inspect/:id",
+  upload.array("inpectedFiles", 5),
+  maintenanceController.inspectMaintenance
+);
+// Get all maintenance requests
+router.get("/", maintenanceController.getAllMaintenanceRequests);
 
 // Get a single maintenance request by ID
 router.get("/:id", maintenanceController.getMaintenanceById);
@@ -71,5 +93,8 @@ router.put(
 
 // Delete a maintenance request
 router.delete("/:id", maintenanceController.deleteMaintenance);
+
+// Serve static files from the 'uploads' directory
+router.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 export default router;

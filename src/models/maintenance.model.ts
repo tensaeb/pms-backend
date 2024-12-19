@@ -3,13 +3,7 @@ import { IMaintenance } from "../interfaces/maintenance.interface";
 
 const maintenanceSchema = new Schema<IMaintenance>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     tenant: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
-    mainteneceUser: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: false,
-    },
     property: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     typeOfRequest: {
       type: String,
@@ -27,6 +21,7 @@ const maintenanceSchema = new Schema<IMaintenance>(
       type: String,
       enum: [
         "Pending",
+        "Approved",
         "In Progress",
         "Completed",
         "Cancelled",
@@ -35,18 +30,33 @@ const maintenanceSchema = new Schema<IMaintenance>(
       ],
       default: "Pending",
     },
-    assignedTo: { type: String },
+    approvalStatus: {
+      type: String,
+      enum: ["Pending", "Approved", "Rejected"],
+      default: "Pending",
+    },
+    assignedMaintainer: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
+    },
+    scheduledDate: { type: Date },
     priorityLevel: { type: String, enum: ["Low", "Medium", "High"] },
     estimatedCompletionTime: { type: Date },
     notes: { type: String },
+    expense: { type: Number },
+    inspectedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    inspectionDate: { type: Date },
     requestedFiles: {
       type: [String],
       validate: [arrayLimit, "Exceeds the limit of 4 files"],
     },
-    inpectedFiles: {
+    inspectedFiles: {
       type: [String],
       validate: [arrayLimit, "Exceeds the limit of 4 files"],
     },
+    feedback: { type: String },
+    requestDate: { type: Date, default: Date.now }, // Added request date
   },
   { timestamps: true }
 );

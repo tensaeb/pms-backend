@@ -68,16 +68,16 @@ router.post(
 );
 
 // Static folder for file uploads
-router.use("/uploads", express.static(path.join(__dirname, "uploads")));
+router.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 router.use(
   "/uploads/receipts",
   express.static(path.join(process.cwd(), "uploads", "receipts"))
 ); // Serve receipts from the sub folder
-router.use(
-  "/uploads/properties",
-  express.static(path.join(process.cwd(), "uploads", "properties"))
-);
 
+router.use(
+  "/uploads/maintenance",
+  express.static(path.join(process.cwd(), "uploads", "maintenance"))
+);
 // API routes
 router.use("/auth", authRoutes);
 router.use("/users", userRoutes);

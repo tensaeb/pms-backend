@@ -1,25 +1,35 @@
 import { Request, Response } from "express";
-
 import { errorResponse, successResponse } from "../utils/apiResponse";
 import { maintenanceService } from "../services/maintenance.service";
 
 class MaintenanceController {
   // Create a new maintenance request
-  public async createMaintenance(req: Request, res: Response): Promise<void> {
+  public async createMaintenanceRequest(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const user = req.user;
-      // Access the uploaded files and extract file paths
+
+      if (!user || user.role !== "Tenant") {
+        res
+          .status(403)
+          .json(
+            errorResponse(
+              "Unauthorized: Only tenants can create maintenance requests"
+            )
+          );
+      }
+
       const uploadedFiles = req.files as Express.Multer.File[];
 
-      // Extract the file paths to store in the database
-      // const filePaths = uploadedFiles.map((file) => file.path);
-
-      // Create maintenance request, including file paths
-      const newMaintenance = await maintenanceService.createMaintenance({
-        ...req.body,
-        user: user,
-        requestedFiles: uploadedFiles, // Store the paths, not the entire file object
-      });
+      const newMaintenance = await maintenanceService.createMaintenanceRequest(
+        {
+          ...req.body,
+          tenant: user,
+        },
+        uploadedFiles
+      );
 
       res
         .status(201)
@@ -30,11 +40,200 @@ class MaintenanceController {
           )
         );
     } catch (error: any) {
+      console.error("Error creating maintenance request:", error);
       res
         .status(500)
         .json(
           errorResponse(error.message, "Failed to create maintenance request")
         );
+    }
+  }
+
+  // Approve maintenance request
+  public async approveMaintenanceRequest(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const updatedMaintenance =
+        await maintenanceService.approveMaintenanceRequest(req.params.id);
+      res
+        .status(200)
+        .json(
+          successResponse(
+            updatedMaintenance,
+            "Maintenance request approved and scheduled successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(error.message, "Failed to approve maintenance request")
+        );
+    }
+  }
+
+  // Assign a maintainer to a maintenance request
+  public async assignMaintainer(req: Request, res: Response): Promise<void> {
+    try {
+      const { maintainerId, scheduledDate, estimatedCompletionTime } = req.body;
+      const { id } = req.params;
+
+      // Validate input
+      if (!id || !maintainerId) {
+        res
+          .status(400)
+          .json(
+            errorResponse("Maintenance ID and Maintainer ID are required.")
+          );
+        return;
+      }
+
+      if (scheduledDate && new Date(scheduledDate) <= new Date()) {
+        res
+          .status(400)
+          .json(errorResponse("Scheduled date must be in the future."));
+        return;
+      }
+
+      if (estimatedCompletionTime && Number(estimatedCompletionTime) <= 0) {
+        res
+          .status(400)
+          .json(
+            errorResponse("Estimated completion time must be greater than 0.")
+          );
+        return;
+      }
+
+      const updatedMaintenance = await maintenanceService.assignMaintainer(
+        id,
+        maintainerId,
+        scheduledDate,
+        estimatedCompletionTime
+      );
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            updatedMaintenance,
+            "Maintenance request assigned to maintainer successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to assign maintainer"));
+    }
+  }
+
+  // Get all maintenance requests assigned to a maintainer
+  public async getMaintenancesByMaintainer(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { maintainerId } = req.params;
+      const maintenances = await maintenanceService.getMaintenancesByMaintainer(
+        maintainerId
+      );
+      res
+        .status(200)
+        .json(
+          successResponse(
+            maintenances,
+            "Maintenances for the maintainer fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch maintenances for the maintainer"
+          )
+        );
+    }
+  }
+  // Get list of maintainers
+  public async getMaintainersList(req: Request, res: Response): Promise<void> {
+    try {
+      const maintainers = await maintenanceService.getMaintainersList();
+      res
+        .status(200)
+        .json(successResponse(maintainers, "Maintainers fetched successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to fetch maintainers"));
+    }
+  }
+  // Maintainer submits maintenance expense
+  public async submitMaintenanceExpense(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { expense } = req.body;
+      const updatedMaintenance =
+        await maintenanceService.submitMaintenanceExpense(
+          req.params.id,
+          expense
+        );
+      res
+        .status(200)
+        .json(
+          successResponse(
+            updatedMaintenance,
+            "Maintenance expense submitted successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(error.message, "Failed to submit maintenance expense")
+        );
+    }
+  }
+
+  // Inspector Inspects Maintenance and mark as inspected
+  public async inspectMaintenance(req: Request, res: Response): Promise<void> {
+    try {
+      const user = req.user!;
+      const maintenanceId = req.params.id;
+      const uploadedFiles = req.files as Express.Multer.File[];
+      const { feedback } = req.body;
+
+      if (!user || !user.id) {
+        res.status(400).json(errorResponse("User ID is required"));
+        return;
+      }
+
+      const updatedMaintenance = await maintenanceService.inspectMaintenance(
+        maintenanceId,
+        {
+          inspectedBy: user.id,
+          inspectedFiles: uploadedFiles,
+          feedback,
+        }
+      );
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            updatedMaintenance,
+            "Maintenance inspected successfully"
+          )
+        );
+    } catch (error: any) {
+      console.error("Error inspecting maintenance:", error);
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to inspect maintenance"));
     }
   }
 

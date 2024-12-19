@@ -1,54 +1,191 @@
 import { Maintenance } from "../models/maintenance.model";
 import { IMaintenance } from "../interfaces/maintenance.interface";
-
+import { User } from "../models/user.model";
 import * as fs from "fs";
 import * as path from "path";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { Parser } from "json2csv";
+import sharp from "sharp";
 
 class MaintenanceService {
-  // Create a new maintenance request
-  public async createMaintenance(
+  private readonly UPLOAD_DIR = path.join(
+    process.cwd(),
+    "uploads",
+    "maintenance"
+  );
+
+  constructor() {
+    this.ensureDirectoriesExist();
+  }
+
+  private ensureDirectoriesExist(): void {
+    if (!fs.existsSync(this.UPLOAD_DIR)) {
+      fs.mkdirSync(this.UPLOAD_DIR, { recursive: true });
+    }
+  }
+
+  public async processImages(files: Express.Multer.File[]): Promise<string[]> {
+    const processedFilePaths: string[] = [];
+
+    for (const file of files) {
+      const fileName = `${Date.now()}-${file.originalname}`;
+      const imagePath = path.join(this.UPLOAD_DIR, fileName);
+
+      // Resize and save the image
+      await sharp(file.path).resize(800).toFile(imagePath);
+
+      // Remove the original uploaded file
+      fs.unlinkSync(file.path);
+
+      // Add the URL of the processed file to the array
+      processedFilePaths.push(`/uploads/maintenance/${fileName}`);
+    }
+
+    return processedFilePaths;
+  }
+
+  public async createMaintenanceRequest(
     maintenanceData: Partial<IMaintenance>,
     requestedFiles?: Express.Multer.File[]
   ): Promise<IMaintenance> {
     const {
-      user,
       tenant,
       property,
       typeOfRequest,
       description,
       urgencyLevel,
       preferredAccessTimes,
-      status,
-      assignedTo,
       priorityLevel,
-      estimatedCompletionTime,
       notes,
     } = maintenanceData;
 
     const newMaintenance = new Maintenance({
-      user,
       tenant,
       property,
       typeOfRequest,
       description,
       urgencyLevel,
       preferredAccessTimes,
-      status,
-      assignedTo,
       priorityLevel,
-      estimatedCompletionTime,
       notes,
     });
 
     if (requestedFiles && requestedFiles.length > 0) {
-      newMaintenance.requestedFiles = requestedFiles.map(
-        (file) => file.filename
-      ); // Save all filenames
+      const processedFileUrls = await this.processImages(requestedFiles);
+      newMaintenance.requestedFiles = processedFileUrls;
     }
 
     return await newMaintenance.save();
+  }
+
+  // Approve a maintenance request
+  public async approveMaintenanceRequest(
+    id: string
+  ): Promise<IMaintenance | null> {
+    const updatedMaintenance = await Maintenance.findByIdAndUpdate(
+      id,
+      {
+        status: "Approved",
+        approvalStatus: "Approved",
+      },
+      { new: true }
+    );
+
+    if (!updatedMaintenance) {
+      throw new Error("Maintenance request not found");
+    }
+    return updatedMaintenance;
+  }
+  // Function to assign maintainer
+  public async assignMaintainer(
+    id: string,
+    maintainerId: string,
+    scheduledDate?: Date,
+    estimatedCompletionTime?: Date
+  ): Promise<IMaintenance | null> {
+    const updatedMaintenance = await Maintenance.findByIdAndUpdate(
+      id,
+      {
+        assignedMaintainer: maintainerId,
+        status: "In Progress",
+        scheduledDate: scheduledDate,
+        estimatedCompletionTime: estimatedCompletionTime,
+      },
+      { new: true }
+    ).populate("assignedMaintainer");
+
+    if (!updatedMaintenance) {
+      throw new Error("Maintenance request not found");
+    }
+
+    return updatedMaintenance;
+  }
+
+  // Function to get all maintenances assigned to a maintainer
+  public async getMaintenancesByMaintainer(
+    maintainerId: string
+  ): Promise<IMaintenance[]> {
+    return await Maintenance.find({ assignedMaintainer: maintainerId })
+      .populate("tenant")
+      .populate("property")
+      .populate("assignedMaintainer");
+  }
+  // Function to get all users with a maintainer role
+  public async getMaintainersList(): Promise<any[]> {
+    return await User.find({ role: "Maintainer" });
+  }
+  // Function for maintainer to submit expenses
+  public async submitMaintenanceExpense(
+    id: string,
+    expense: number
+  ): Promise<IMaintenance | null> {
+    const updatedMaintenance = await Maintenance.findByIdAndUpdate(
+      id,
+      { expense: expense, status: "Completed" },
+      { new: true }
+    );
+
+    if (!updatedMaintenance) {
+      throw new Error("Maintenance request not found");
+    }
+    return updatedMaintenance;
+  }
+
+  // Function for inspector to inspect and mark as inspected
+  public async inspectMaintenance(
+    id: string,
+    {
+      inspectedBy,
+      inspectedFiles,
+      feedback,
+    }: {
+      inspectedBy: string;
+      inspectedFiles?: Express.Multer.File[];
+      feedback?: string;
+    }
+  ): Promise<IMaintenance | null> {
+    const updatedMaintenance = await Maintenance.findByIdAndUpdate(
+      id,
+      {
+        status: "Inspected",
+        inspectedBy,
+        inspectionDate: Date.now(),
+        feedback,
+      },
+      { new: true }
+    );
+
+    if (!updatedMaintenance) {
+      throw new Error("Maintenance request not found");
+    }
+
+    if (inspectedFiles && inspectedFiles.length > 0) {
+      const processedFileUrls = await this.processImages(inspectedFiles);
+      updatedMaintenance.inspectedFiles = processedFileUrls;
+      await updatedMaintenance.save(); // Ensure the files are saved in the database
+    }
+
+    return updatedMaintenance;
   }
 
   // Get all maintenance requests with pagination and search
@@ -96,7 +233,8 @@ class MaintenanceService {
   public async getMaintenanceById(id: string): Promise<IMaintenance | null> {
     return await Maintenance.findById(id)
       .populate("tenant")
-      .populate("property");
+      .populate("property")
+      .populate("assignedMaintainer");
   }
 
   // Update a maintenance request by ID

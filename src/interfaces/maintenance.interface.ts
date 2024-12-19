@@ -1,7 +1,6 @@
 import { Document, Types } from "mongoose";
 
 export interface IMaintenance extends Document {
-  user: Types.ObjectId;
   tenant: Types.ObjectId;
   mainteneceUser: Types.ObjectId;
   property: Types.ObjectId;
@@ -21,12 +20,21 @@ export interface IMaintenance extends Document {
     | "Cancelled"
     | "Inspected"
     | "Incomplete";
+
+  approvalStatus?: "Pending" | "Approved" | "Rejected";
+  assignedMaintainer: Types.ObjectId;
+  scheduledDate: Date;
   assignedTo?: string;
+  expense: number;
+  inspectedBy: Types.ObjectId;
+  inspectionDate?: Date;
   priorityLevel?: "Low" | "Medium" | "High";
   estimatedCompletionTime?: Date;
   notes?: string;
   requestedFiles?: string[];
-  inpectedFiles?: string[];
+  inspectedFiles?: string[];
+  feedback: string;
+  requestDate: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
