@@ -14,7 +14,7 @@ class TenantController {
       const newTenant = await tenantService.createTenant(
         tenantData,
         files,
-        user
+        user!.id
       );
 
       res

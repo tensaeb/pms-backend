@@ -6,15 +6,21 @@ import { Lease } from "../models/lease.model";
 import { Maintenance } from "../models/maintenance.model";
 import { Property } from "../models/property.model";
 import { Tenant } from "../models/tenant.model";
-import { Types } from "mongoose";
+import { Model, Types } from "mongoose";
+import { randomInt } from "crypto";
+
+// Define the return type for methods that need to include unhashedPassword
+export type UserWithUnhashedPassword = {
+  unhashedPassword: string;
+} & ReturnType<Model<IUser>["hydrate"]>;
 
 class UserService {
   // Create a SuperUser if the database is empty
   public async createSuperUser(
     userData: Partial<IUser>,
     file?: Express.Multer.File
-  ): Promise<IUser> {
-    const userCount = await User.countDocuments(); // Check if there are any users in the database
+  ): Promise<UserWithUnhashedPassword> {
+    const userCount = await User.countDocuments();
 
     if (userCount > 0) {
       throw new Error(
@@ -22,41 +28,46 @@ class UserService {
       );
     }
 
-    const { name, email, password } = userData;
+    const { name, email } = userData;
 
-    if (!name || !email || !password) {
-      throw new Error(
-        "Name, email, and password are required for SuperUser creation."
-      );
+    if (!name || !email) {
+      throw new Error("Name and email are required for SuperUser creation.");
     }
 
+    const defaultPassword = randomInt(10000, 100000).toString();
+    const password = userData.password || defaultPassword;
     const hashedPassword = await bcrypt.hash(password!, 10);
 
     const superUser = new User({
       name,
       email,
       password: hashedPassword,
-      role: "SuperAdmin", // Assign the SuperAdmin role
+      role: "SuperAdmin",
       status: "active",
-      registeredBy: null, // No one is registering this SuperUser manually
+      registeredBy: null,
     });
 
-    return await superUser.save();
+    const savedSuperUser = await superUser.save();
+    const userWithPassword = savedSuperUser.toObject();
+    return {
+      ...userWithPassword,
+      unhashedPassword: password,
+    } as UserWithUnhashedPassword;
   }
 
-  //create user
   public async createUser(
     userData: Partial<IUser>,
     loggedInUserId: string | undefined,
     file?: Express.Multer.File
-  ): Promise<IUser> {
-    const { name, email, phoneNumber, address, role, status, password } =
-      userData;
+  ): Promise<UserWithUnhashedPassword> {
+    const { name, email, phoneNumber, address, role, status } = userData;
 
     if (!loggedInUserId) {
       throw new Error("Logged in user ID is required");
     }
 
+    const defaultPassword = randomInt(10000, 100000).toString();
+    const password = userData.password || defaultPassword;
     const hashedPassword = await bcrypt.hash(password!, 10);
 
     const newUser = new User({
@@ -67,7 +78,7 @@ class UserService {
       role,
       status,
       password: hashedPassword,
-      registeredBy: loggedInUserId, // Set the registeredBy field
+      registeredBy: loggedInUserId,
     });
 
     if (userData.role === "Admin") {
@@ -83,7 +94,12 @@ class UserService {
       newUser.photo = file.filename;
     }
 
-    return await newUser.save();
+    const savedUser = await newUser.save();
+    const userObject = savedUser.toObject();
+    return {
+      ...userObject,
+      unhashedPassword: password,
+    } as UserWithUnhashedPassword;
   }
 
   // Get all users with pagination, search, and filtering

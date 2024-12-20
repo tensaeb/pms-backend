@@ -7,40 +7,58 @@ import { Parser } from "json2csv";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { User } from "../models/user.model";
 import { IUser } from "../interfaces/user.interface";
-import { DecodedToken } from "../middlewares/authMiddleware";
+import { randomInt } from "crypto";
+import { UserWithUnhashedPassword } from "./user.services";
 
 class TenantService {
   public async createTenant(
     tenantData: Partial<ITenant>,
     files?: Express.Multer.File[],
-    user?: DecodedToken
-  ): Promise<ITenant> {
-    // Hash the tenant's password before saving
-    const hashedPassword = await bcrypt.hash(tenantData.password!, 10);
+    loggedInUserId?: string
+  ): Promise<{ tenant: ITenant; user: UserWithUnhashedPassword }> {
+    const { tenantName, contactInformation, password } = tenantData;
+
+    if (!tenantName || !contactInformation?.email) {
+      throw new Error("Tenant name and email are required.");
+    }
+
+    const defaultPassword = randomInt(10000, 100000).toString();
+    const unhashedPassword = password || defaultPassword;
+    const hashedPassword = await bcrypt.hash(unhashedPassword, 10);
 
     // Create a new tenant in the tenant collection
     const newTenant = new Tenant({
       ...tenantData,
       password: hashedPassword,
-      user,
+      registeredBy: loggedInUserId,
     });
 
     if (files && files.length > 0) {
       newTenant.idProof = files.map((file) => file.filename);
     }
 
-    // Create a corresponding user with the "Tenant" role using tenant's contact information and password
-    const newUser: Partial<IUser> = {
-      name: tenantData.tenantName,
-      email: tenantData.contactInformation!.email,
+    // Create a corresponding user with the "Tenant" role
+    const newUser = new User({
+      name: tenantName,
+      email: contactInformation.email,
       password: hashedPassword,
-      role: "Tenant", // Assign the "Tenant" role
+      role: "Tenant",
+      registeredBy: loggedInUserId,
+    });
+
+    const savedUser = await newUser.save();
+    const userWithPassword = savedUser.toObject();
+
+    // Save the tenant data
+    const savedTenant = await newTenant.save();
+
+    return {
+      tenant: savedTenant,
+      user: {
+        ...userWithPassword,
+        unhashedPassword,
+      } as UserWithUnhashedPassword,
     };
-
-    // Save the tenant's user in the User model
-    await new User(newUser).save();
-
-    return await newTenant.save(); // Save the tenant data
   }
 
   public async getAllTenants(query: any): Promise<{
