@@ -168,17 +168,16 @@ class PropertyController {
   public async editPhoto(req: Request, res: Response): Promise<void> {
     try {
       const { propertyId, photoId } = req.params;
-      const { newUrl } = req.body;
 
-      if (!newUrl) {
-        res.status(400).json({ message: "New URL is required" });
+      if (!req.file) {
+        res.status(400).json({ message: "New photo file is required" });
         return;
       }
 
       const updatedProperty = await propertyService.editPhoto(
         propertyId,
         photoId,
-        newUrl
+        req.file
       );
 
       res

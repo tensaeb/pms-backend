@@ -90,7 +90,7 @@ class PropertyService {
   public async editPhoto(
     propertyId: string,
     photoId: string,
-    newUrl: string
+    file: Express.Multer.File | undefined
   ): Promise<IProperty> {
     const property = await Property.findById(propertyId);
     if (!property) throw new Error("Property not found");
@@ -98,8 +98,33 @@ class PropertyService {
     const photoIndex = property.photos.findIndex((p) => p.id === photoId);
     if (photoIndex === -1) throw new Error("Photo not found");
 
-    property.photos[photoIndex].url = newUrl;
-    return await property.save();
+    const oldPhotoUrl = property.photos[photoIndex].url;
+    if (!file) {
+      throw new Error("New image not found, must upload a new image.");
+    }
+    const newPhotoUrl = file.path;
+
+    // Delete old file
+    try {
+      const oldFilePath = path.join(process.cwd(), oldPhotoUrl);
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
+      }
+    } catch (deleteError: any) {
+      console.error("Error deleting old photo file: ", deleteError.message);
+      // Note: We won't throw here as the file deletion is not crucial to image replacement.
+    }
+
+    property.photos[photoIndex].url = newPhotoUrl;
+
+    const updatedProperty = await Property.findByIdAndUpdate(
+      propertyId,
+      { photos: property.photos },
+      { new: true, runValidators: true }
+    );
+    if (!updatedProperty) throw new Error("Property update failed");
+
+    return updatedProperty;
   }
 
   public async deletePhoto(
@@ -119,7 +144,17 @@ class PropertyService {
     }
 
     property.photos = property.photos.filter((p) => p.id !== photoId);
-    return await property.save();
+
+    //Ensure admin is passed along
+    const updatedProperty = await Property.findByIdAndUpdate(
+      propertyId,
+      { photos: property.photos },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedProperty) throw new Error("Property update failed");
+
+    return updatedProperty;
   }
 
   public async getAllProperties(query: {

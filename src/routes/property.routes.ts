@@ -9,7 +9,7 @@ const router = express.Router();
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, "uploads/properties");
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
@@ -33,12 +33,12 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter,
-}).array("photos", 5);
+});
 
 router.use(authenticate);
 
 router.get("/report", propertyController.generateReport);
-router.post("/", upload, propertyController.createProperty);
+router.post("/", upload.array("photos", 5), propertyController.createProperty);
 
 // Fetch all images from a property
 router.get("/:propertyId/images", propertyController.fetchAllImages);
@@ -46,12 +46,16 @@ router.get("/:propertyId/images", propertyController.fetchAllImages);
 // Fetch a single image from a property
 router.get("/:propertyId/images/:imageId", propertyController.fetchSingleImage);
 
-router.put("/:propertyId/photos/:photoId", propertyController.editPhoto);
+router.put(
+  "/:propertyId/photos/:photoId",
+  upload.single("file"),
+  propertyController.editPhoto
+);
 router.delete("/:propertyId/photos/:photoId", propertyController.deletePhoto);
 
 router.get("/", propertyController.getAllProperties);
 router.get("/:id", propertyController.getPropertyById);
-router.put("/:id", upload, propertyController.updateProperty);
+router.put("/:id", upload.single("photo"), propertyController.updateProperty);
 router.delete("/:id", propertyController.deleteProperty);
 
 export default router;

@@ -10,6 +10,11 @@ class TenantController {
       const user = req.user;
       const tenantData = req.body;
 
+      console.log("====================================");
+      console.log(tenantData);
+      console.log(user);
+      console.log("====================================");
+
       // Create tenant and corresponding user
       const newTenant = await tenantService.createTenant(
         tenantData,
