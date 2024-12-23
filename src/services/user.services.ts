@@ -102,6 +102,27 @@ class UserService {
     } as UserWithUnhashedPassword;
   }
 
+  public async resetPassword(
+    userId: string,
+    newPassword: string
+  ): Promise<IUser> {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the user's password and status
+    user.password = hashedPassword;
+    user.status = "active";
+
+    await user.save();
+
+    return user;
+  }
+
   // Get all users with pagination, search, and filtering
   public async getAllUsers(query: any): Promise<{
     users: Partial<IUser>[];

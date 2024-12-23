@@ -22,7 +22,7 @@ const fileFilter = (
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ) => {
-  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+  const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
   if (!allowedTypes.includes(file.mimetype)) {
     return cb(null, false);
   }
@@ -55,7 +55,11 @@ router.delete("/:propertyId/photos/:photoId", propertyController.deletePhoto);
 
 router.get("/", propertyController.getAllProperties);
 router.get("/:id", propertyController.getPropertyById);
-router.put("/:id", upload.single("photo"), propertyController.updateProperty);
+router.put(
+  "/:id",
+  upload.array("photos", 5),
+  propertyController.updateProperty
+);
 router.delete("/:id", propertyController.deleteProperty);
 
 export default router;

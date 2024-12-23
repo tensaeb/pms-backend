@@ -27,7 +27,7 @@ class AuthService {
       throw new Error("Invalid credentials");
     }
 
-    const token = this.generateToken(user, "1h");
+    const token = this.generateToken(user, "24h");
     const refreshToken = this.generateToken(user, "24h");
 
     return {

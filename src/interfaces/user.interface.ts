@@ -8,7 +8,7 @@ export interface IUser extends Document {
   role: "User" | "Admin" | "SuperAdmin" | "Tenant" | "Maintainer" | "Inspector";
   phoneNumber?: string;
   address?: string;
-  status: "active" | "inactive";
+  status: "pending" | "active" | "inactive";
   resetCode?: string;
   resetCodeExpiration?: Date;
   activeStart?: Date;

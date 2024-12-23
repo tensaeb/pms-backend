@@ -122,6 +122,28 @@ class UserController {
     }
   }
 
+  public async resetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const { newPassword } = req.body;
+
+      if (!newPassword || newPassword.length < 6) {
+        res
+          .status(400)
+          .json({ message: "Password must be at least 6 characters long" });
+        return;
+      }
+
+      const result = await userService.resetPassword(userId, newPassword);
+
+      res
+        .status(200)
+        .json(successResponse(result, "Password reset successful."));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
   // Get all users with pagination
   public async getAllUsers(req: Request, res: Response): Promise<void> {
     try {

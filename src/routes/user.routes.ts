@@ -73,6 +73,12 @@ router.put("/:userId/permissions", userController.updatePermissions);
 
 router.get("/:id", authenticate, userController.getUserById);
 router.put("/:id", authenticate, userController.updateUserById);
+// Route to reset password
+router.put(
+  "/:userId/reset-password",
+  authenticate,
+  userController.resetPassword
+);
 
 // Route to delete a user with all connections
 router.delete(

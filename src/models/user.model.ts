@@ -23,8 +23,8 @@ const userSchema = new Schema<IUser>(
     address: { type: String },
     status: {
       type: String,
-      enum: ["active", "inactive"],
-      default: "active",
+      enum: ["pending", "active", "inactive"],
+      default: "pending",
       set: (val: string) => val.toLowerCase(), // Convert input to lowercase
     },
     resetCode: { type: String },

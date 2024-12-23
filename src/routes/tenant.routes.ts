@@ -26,7 +26,7 @@ const upload = multer({
     },
   }),
   limits: {
-    fileSize: 1024 * 1024 * 5, // Limit to 5MB
+    fileSize: 1024 * 1024 * 55, // Limit to 55MB
   },
 }).fields([
   { name: "idProof", maxCount: 3 }, // Expecting up to 3 files for idProof
