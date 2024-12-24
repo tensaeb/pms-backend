@@ -192,6 +192,49 @@ class UserService {
     };
   }
 
+  public async getUsersByRegisteredBy(
+    registeredBy: string,
+    query: any
+  ): Promise<{
+    users: Partial<IUser>[];
+    totalPages: number;
+    currentPage: number;
+    totalUsers: number;
+  }> {
+    const { page = 1, limit = 20, search = "", role, status } = query;
+
+    const searchQuery: any = {
+      registeredBy,
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { phoneNumber: { $regex: search, $options: "i" } },
+      ],
+    };
+
+    if (role) {
+      searchQuery.role = role;
+    }
+
+    if (status) {
+      searchQuery.status = status;
+    }
+
+    const users = await User.find(searchQuery)
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .select("name email phoneNumber role status");
+
+    const totalUsers = await User.countDocuments(searchQuery);
+
+    return {
+      users,
+      totalPages: Math.ceil(totalUsers / limit),
+      currentPage: Number(page),
+      totalUsers,
+    };
+  }
+
   // Get Super Admin users with pagination and search
   public async getSuperAdminUsers(query: any) {
     const { page = 1, limit = 5, search = "" } = query;
@@ -250,7 +293,7 @@ class UserService {
   }
   // Get user by ID
   async getUserById(id: string) {
-    return await User.findById(id).select("name email role photo address");
+    return await User.findById(id);
   }
 
   // Update user by ID

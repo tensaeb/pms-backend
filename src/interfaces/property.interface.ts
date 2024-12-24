@@ -6,7 +6,7 @@ export interface IPhoto {
 }
 
 export interface IProperty extends Document {
-  admin: Types.ObjectId;
+  userCreated: Types.ObjectId;
   title: string;
   description: string;
   address: string;
@@ -16,6 +16,13 @@ export interface IProperty extends Document {
   propertyType: string;
   floorPlan?: string;
   amenities?: string[];
+  status?:
+    | "open"
+    | "reserved"
+    | "closed"
+    | "under Maintenance"
+    | "leased"
+    | "sold";
   photos: IPhoto[];
   createdAt: Date;
   updatedAt: Date;

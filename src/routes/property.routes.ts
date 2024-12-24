@@ -1,65 +1,86 @@
-// property.routes.ts
 import express from "express";
-import multer from "multer";
-import { propertyController } from "../controllers/property.controller";
 import { admin, authenticate } from "../middlewares/authMiddleware";
+import { propertyController } from "../controllers/property.controller";
+import multer from "multer";
 import path from "path";
+import fs from "fs";
 
 const router = express.Router();
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/properties");
+    const uploadDir = path.join(__dirname, "../uploads/properties");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${uniqueSuffix}${path.extname(file.originalname)}`);
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, `${uniqueSuffix}-${file.originalname}`);
   },
 });
 
-const fileFilter = (
-  req: Express.Request,
-  file: Express.Multer.File,
-  cb: multer.FileFilterCallback
-) => {
-  const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-  if (!allowedTypes.includes(file.mimetype)) {
-    return cb(null, false);
-  }
-  cb(null, true);
-};
+const upload = multer({ storage });
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter,
-});
-
-router.use(authenticate);
-
-router.get("/report", propertyController.generateReport);
-router.post("/", upload.array("photos", 5), propertyController.createProperty);
-
-// Fetch all images from a property
-router.get("/:propertyId/images", propertyController.fetchAllImages);
-
-// Fetch a single image from a property
-router.get("/:propertyId/images/:imageId", propertyController.fetchSingleImage);
-
-router.put(
-  "/:propertyId/photos/:photoId",
-  upload.single("file"),
-  propertyController.editPhoto
+// Create a new property
+router.post(
+  "/",
+  authenticate,
+  upload.array("photos"),
+  propertyController.createProperty
 );
-router.delete("/:propertyId/photos/:photoId", propertyController.deletePhoto);
 
-router.get("/", propertyController.getAllProperties);
-router.get("/:id", propertyController.getPropertyById);
+router.get("/images/:propertyId", propertyController.fetchAllImages);
+router.get("/images/:propertyId/:imageId", propertyController.fetchSingleImage);
+
+// Get all properties with pagination
+router.get("/", authenticate, propertyController.getAllProperties);
+
+// Get a property by ID
+router.get("/:id", authenticate, propertyController.getPropertyById);
+
+// get properties by admin id
+router.get(
+  "/user/:userId",
+  authenticate,
+  propertyController.getPropertiesByUserId
+);
+
+// get properties by registeredBy id
+router.get(
+  "/userAdmin/:userAdminId",
+  authenticate,
+  propertyController.getPropertiesByUserAdminId
+);
+
+// Update a property by ID
 router.put(
   "/:id",
-  upload.array("photos", 5),
+  authenticate,
+  admin,
+  upload.array("photos"),
   propertyController.updateProperty
 );
-router.delete("/:id", propertyController.deleteProperty);
+
+// Delete a property by ID
+router.delete("/:id", authenticate, admin, propertyController.deleteProperty);
+
+// Edit a photo by ID
+router.put(
+  "/:propertyId/photo/:photoId",
+  authenticate,
+  admin,
+  upload.single("photo"),
+  propertyController.editPhoto
+);
+
+// Delete a photo by ID
+router.delete(
+  "/:propertyId/photo/:photoId",
+  authenticate,
+  admin,
+  propertyController.deletePhoto
+);
 
 export default router;

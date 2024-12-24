@@ -8,7 +8,7 @@ const photoSchema = new Schema<IPhoto>({
 
 const propertySchema = new Schema<IProperty>(
   {
-    admin: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    userCreated: { type: Schema.Types.ObjectId, ref: "User", required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
     address: { type: String, required: true },
@@ -18,6 +18,19 @@ const propertySchema = new Schema<IProperty>(
     propertyType: { type: String, required: true },
     floorPlan: { type: String },
     amenities: [String],
+    status: {
+      type: String,
+      enum: [
+        "open",
+        "reserved",
+        "closed",
+        "under maintenance",
+        "leased",
+        "sold",
+      ],
+      default: "open",
+    },
+
     photos: { type: [photoSchema], default: [] },
   },
   { timestamps: true }

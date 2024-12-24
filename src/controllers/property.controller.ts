@@ -23,7 +23,7 @@ class PropertyController {
       // }
 
       const files = req.files as Express.Multer.File[];
-      const propertyData = { ...req.body, admin: user };
+      const propertyData = { ...req.body, userCreated: user };
 
       const newProperty = await propertyService.createProperty(
         propertyData,
@@ -126,44 +126,6 @@ class PropertyController {
     }
   }
 
-  //Generate Report
-  public async generateReport(req: Request, res: Response): Promise<void> {
-    try {
-      const { startDate, endDate } = req.query;
-
-      // // Validate startDate and endDate
-      // if (!startDate || !endDate) {
-      //   res
-      //     .status(400)
-      //     .json(errorResponse("Start date and end date are required"));
-      //   return;
-      // }
-
-      // Generate the report and get file paths along with the properties
-      const { csvPath, wordPath, properties } =
-        await propertyService.generateReport(
-          startDate as string,
-          endDate as string
-        );
-
-      // Return the file paths and the properties data in the response
-      res.status(200).json({
-        message: "Report generated successfully",
-        data: {
-          files: {
-            csv: csvPath,
-            word: wordPath,
-          },
-          properties, // Return the properties data in the response
-        },
-      });
-    } catch (error: any) {
-      res
-        .status(500)
-        .json(errorResponse(error.message, "Failed to generate report"));
-    }
-  }
-
   // Edit a photo
   public async editPhoto(req: Request, res: Response): Promise<void> {
     try {
@@ -203,6 +165,50 @@ class PropertyController {
         .json({ message: "Photo deleted successfully", data: updatedProperty });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  }
+
+  // Get properties by admin ID
+  public async getPropertiesByUserId(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const query = req.query;
+      const properties = await propertyService.getPropertiesByUserId(
+        userId,
+        query
+      );
+      res
+        .status(200)
+        .json(successResponse(properties, "Properties fetched successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to fetch properties"));
+    }
+  }
+
+  // Get properties by registeredBy ID
+  public async getPropertiesByUserAdminId(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredBy } = req.params;
+      const query = req.query;
+      const properties = await propertyService.getPropertiesByUserAdminID(
+        registeredBy,
+        query
+      );
+      res
+        .status(200)
+        .json(successResponse(properties, "Properties fetched successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to fetch properties"));
     }
   }
 }

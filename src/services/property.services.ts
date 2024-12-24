@@ -232,91 +232,71 @@ class PropertyService {
 
     await Property.findByIdAndDelete(id);
   }
+  public async getPropertiesByUserId(
+    userId: string,
+    query: any
+  ): Promise<{
+    properties: Partial<IProperty>[];
+    totalPages: number;
+    currentPage: number;
+    totalProperties: number;
+  }> {
+    const { page = 1, limit = 20, search = "" } = query;
 
-  public async generateReport(
-    startDate?: string,
-    endDate?: string
-  ): Promise<{ csvPath: string; wordPath: string; properties: IProperty[] }> {
-    // Construct the query filter
-    const filter: any = {};
-    if (startDate && endDate) {
-      filter.createdAt = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate),
-      };
-    }
+    const searchQuery: any = {
+      userCreated: userId,
+      $or: [{ title: { $regex: search, $options: "i" } }],
+    };
 
-    // Fetch properties based on the filter
-    const properties = await Property.find(filter).lean();
+    const properties = await Property.find(searchQuery)
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
 
-    if (!properties.length) {
-      throw new Error("No properties found for the given date range");
-    }
+    const totalProperties = await Property.countDocuments(searchQuery);
 
-    const timestamp = Date.now();
-    const csvPath = path.join(this.REPORTS_DIR, `properties-${timestamp}.csv`);
-    const wordPath = path.join(
-      this.REPORTS_DIR,
-      `properties-${timestamp}.docx`
-    );
-
-    await this.generateCSVReport(properties, csvPath);
-    await this.generateWordReport(properties, wordPath);
-
-    return { csvPath, wordPath, properties };
+    return {
+      properties,
+      totalPages: Math.ceil(totalProperties / limit),
+      currentPage: Number(page),
+      totalProperties,
+    };
   }
 
-  private async generateCSVReport(
-    properties: IProperty[],
-    filePath: string
-  ): Promise<void> {
-    const cleanedProperties = properties.map((property) => ({
-      ...property,
-      amenities: property.amenities?.join(", "),
-      photos: property.photos.map((p) => p.url).join(", "),
-    }));
+  public async getPropertiesByUserAdminID(
+    userAdminId: string,
+    query: any
+  ): Promise<{
+    properties: Partial<IProperty>[];
+    totalPages: number;
+    currentPage: number;
+    totalProperties: number;
+  }> {
+    const { page = 1, limit = 20, search = "" } = query;
 
-    const csv = this.parser.parse(cleanedProperties);
-    fs.writeFileSync(filePath, csv);
-  }
+    // Fetch properties that were created by users registered by the loggedInUserId.
+    const searchQuery: any = {
+      "userCreated.registeredBy": userAdminId,
+      $or: [{ title: { $regex: search, $options: "i" } }],
+    };
 
-  private async generateWordReport(
-    properties: IProperty[],
-    filePath: string
-  ): Promise<void> {
-    const doc = new Document({
-      sections: [
-        {
-          properties: {},
-          children: properties.flatMap((property) => [
-            new Paragraph({
-              children: [
-                new TextRun({ text: `Title: ${property.title}`, bold: true }),
-              ],
-            }),
-            new Paragraph({ text: `Description: ${property.description}` }),
-            new Paragraph({ text: `Address: ${property.address}` }),
-            new Paragraph({ text: `Price: $${property.price}` }),
-            new Paragraph({ text: `Rent Price: $${property.rentPrice}` }),
-            new Paragraph({
-              text: `Number of Units: ${property.numberOfUnits}`,
-            }),
-            new Paragraph({ text: `Property Type: ${property.propertyType}` }),
-            new Paragraph({ text: `Floor Plan: ${property.floorPlan}` }),
-            new Paragraph({
-              text: `Amenities: ${property.amenities?.join(", ")}`,
-            }),
-            new Paragraph({
-              text: `Photos: ${property.photos.map((p) => p.url).join(", ")}`,
-            }),
-            new Paragraph({ text: "\n---\n" }),
-          ]),
-        },
-      ],
-    });
+    const properties = await Property.find(searchQuery)
+      .populate({
+        path: "userCreated",
+        select: "registeredBy",
+      })
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .select(
+        "title description address price rentPrice numberOfUnits propertyType status"
+      );
 
-    const buffer = await Packer.toBuffer(doc);
-    fs.writeFileSync(filePath, buffer);
+    const totalProperties = await Property.countDocuments(searchQuery);
+    return {
+      properties,
+      totalPages: Math.ceil(totalProperties / limit),
+      currentPage: Number(page),
+      totalProperties,
+    };
   }
 }
 

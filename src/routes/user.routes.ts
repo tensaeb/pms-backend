@@ -67,6 +67,12 @@ router.get("/user", authenticate, userController.getUsers);
 router.get("/", authenticate, userController.getAllUsers);
 router.get("/:userId/permissions", userController.updatePermissions);
 router.get("/all-items", authenticate, userController.getUserItems);
+// Get users by registeredBy ID
+router.get(
+  "/registeredBy/:registeredBy",
+  authenticate,
+  userController.getUsersByRegisteredBy
+);
 
 // Update permissions
 router.put("/:userId/permissions", userController.updatePermissions);
