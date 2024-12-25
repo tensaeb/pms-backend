@@ -3,6 +3,7 @@ import { IUser } from "./user.interface";
 
 export interface ITenant extends Document {
   user: Types.ObjectId | IUser;
+  registeredBy: Types.ObjectId | IUser;
   tenantName: string;
   contactInformation: {
     email: string;

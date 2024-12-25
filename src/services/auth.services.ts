@@ -22,6 +22,10 @@ class AuthService {
       throw new Error("Invalid credentials");
     }
 
+    if (user.status !== "active") {
+      throw new Error("Account is not active. Please contact administrator.");
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       throw new Error("Invalid credentials");

@@ -27,13 +27,19 @@ router.get("/report", admin, leaseController.generateReport);
 router.get("/download/:file", leaseController.downloadLeaseDocument);
 
 // Create a lease
-router.post("/", admin, upload, leaseController.createLease);
+router.post("/", upload, leaseController.createLease);
 
 // GET leases (for all users)
 router.get("/", leaseController.getAllLeases);
 
 // GET lease by ID
 router.get("/:id", leaseController.getLeaseById);
+
+router.get(
+  "/registeredBy/:registeredBy",
+  authenticate,
+  leaseController.getLeasesByRegisteredBy
+);
 
 // UPDATE lease by ID
 router.put("/:id", admin, upload, leaseController.updateLease);

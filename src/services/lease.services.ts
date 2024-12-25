@@ -7,12 +7,13 @@ import { Document, Packer, Paragraph, TextRun } from "docx";
 import { ITenant } from "../interfaces/tenant.interface";
 import { IProperty } from "../interfaces/property.interface";
 import { DecodedToken } from "../middlewares/authMiddleware";
+import { User } from "../models/user.model";
 
 class LeaseService {
   public async createLease(
     leaseData: Partial<ILease>,
     files?: Express.Multer.File[],
-    user?: DecodedToken
+    user?: string | undefined
   ): Promise<ILease> {
     const newLease = new Lease({ ...leaseData, user: user });
 
@@ -29,7 +30,7 @@ class LeaseService {
     currentPage: number;
     totalLeases: number;
   }> {
-    const { page = 1, limit = 5, search = "" } = query;
+    const { page = 1, limit = 10, search = "" } = query;
 
     const searchQuery: any = {
       $or: [
@@ -39,6 +40,7 @@ class LeaseService {
     };
 
     const leases = await Lease.find(searchQuery)
+      .populate("user")
       .populate("tenant")
       .populate("property")
       .skip((page - 1) * limit)
@@ -55,7 +57,10 @@ class LeaseService {
   }
 
   public async getLeaseById(id: string): Promise<ILease | null> {
-    return await Lease.findById(id).populate("tenant").populate("property");
+    return await Lease.findById(id)
+      .populate("user")
+      .populate("tenant")
+      .populate("property");
   }
 
   public async updateLease(
@@ -192,6 +197,45 @@ class LeaseService {
 
     // Return file paths and leases
     return { csvPath: csvFilePath, wordPath: wordFilePath, leases };
+  }
+
+  public async getLeasesByRegisteredBy(
+    registeredBy: string,
+    query: any
+  ): Promise<{
+    leases: Partial<ILease>[];
+    totalPages: number;
+    currentPage: number;
+    totalLeases: number;
+  }> {
+    const { page = 1, limit = 10, search = "" } = query;
+
+    // First find all users registered by this ID
+    const registeredUsers = await User.find({ registeredBy: registeredBy });
+    const registeredUserIds = registeredUsers.map((user) => user._id);
+
+    // Build the search query
+    const searchQuery: any = {
+      user: { $in: registeredUserIds },
+    };
+
+    const leases = await Lease.find(searchQuery)
+      .populate({
+        path: "user",
+        select: "registeredBy",
+      })
+      .populate("property")
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const totalLeases = await Lease.countDocuments(searchQuery);
+
+    return {
+      leases,
+      totalPages: Math.ceil(totalLeases / limit),
+      currentPage: Number(page),
+      totalLeases,
+    };
   }
 }
 

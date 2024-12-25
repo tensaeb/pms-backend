@@ -67,7 +67,7 @@ class TenantService {
     currentPage: number;
     totalTenants: number;
   }> {
-    const { page = 1, limit = 5, search = "" } = query;
+    const { page = 1, limit = 10, search = "" } = query;
 
     const searchQuery: any = {
       tenantName: { $regex: search, $options: "i" },
@@ -75,7 +75,7 @@ class TenantService {
 
     const tenants = await Tenant.find(searchQuery)
       .populate("propertyInformation")
-      .populate("user") // Keep this to show the creator of the tenant
+      .populate("registeredBy") // Keep this to show the creator of the tenant
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .lean();
@@ -107,7 +107,7 @@ class TenantService {
   ): Promise<(ITenant & { tenantUser?: IUser }) | null> {
     const tenant = await Tenant.findById(id)
       .populate("propertyInformation")
-      .populate("user") // Keep this to show the creator of the tenant
+      .populate("registeredBy") // Keep this to show the creator of the tenant
       .lean();
 
     if (!tenant) {
@@ -242,6 +242,38 @@ class TenantService {
     // Return file paths and tenants
     return { csvPath: csvFilePath, wordPath: wordFilePath, tenants };
   }
-}
 
+  public async getTenantsByUserAdmin(registeredBy: string, query: any) {
+    const { page = 1, limit = 10, search = "" } = query;
+
+    // First, find all users registered by this ID
+    const registeredUsers = await User.find({ registeredBy: registeredBy });
+    const registeredUserIds = registeredUsers.map((user) => user._id);
+
+    const searchQuery: any = {
+      registeredBy: { $in: registeredUserIds },
+      tenantName: { $regex: search, $options: "i" },
+    };
+
+    const tenants = await Tenant.find(searchQuery)
+      .populate({
+        path: "registeredBy",
+        select: "name email role status",
+      })
+      .populate("propertyInformation")
+      .populate("user")
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .lean();
+
+    const totalTenants = await Tenant.countDocuments(searchQuery);
+
+    return {
+      tenants,
+      totalPages: Math.ceil(totalTenants / limit),
+      currentPage: Number(page),
+      totalTenants,
+    };
+  }
+}
 export const tenantService = new TenantService();

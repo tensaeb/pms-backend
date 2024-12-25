@@ -38,13 +38,20 @@ router.use(authenticate);
 router.get("/report", admin, tenantController.generateReport);
 
 // Create a tenant
-router.post("/", admin, upload, tenantController.createTenant);
+router.post("/", upload, tenantController.createTenant);
 
 // GET tenants (for all users)
 router.get("/", tenantController.getAllTenants);
 
 // GET tenant by ID
 router.get("/:id", tenantController.getTenantById);
+
+// Route to get tenants registered by a specific user
+router.get(
+  "/registeredBy/:registeredBy",
+  authenticate,
+  tenantController.getTenantsByUserAdmin
+);
 
 // UPDATE tenant by ID
 router.put("/:id", admin, upload, tenantController.updateTenant);

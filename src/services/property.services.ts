@@ -241,7 +241,7 @@ class PropertyService {
     currentPage: number;
     totalProperties: number;
   }> {
-    const { page = 1, limit = 20, search = "" } = query;
+    const { page = 1, limit = 10, search = "" } = query;
 
     const searchQuery: any = {
       userCreated: userId,
@@ -271,7 +271,7 @@ class PropertyService {
     currentPage: number;
     totalProperties: number;
   }> {
-    const { page = 1, limit = 20, search = "" } = query;
+    const { page = 1, limit = 10, search = "" } = query;
 
     // Fetch properties that were created by users registered by the loggedInUserId.
     const searchQuery: any = {
@@ -285,10 +285,10 @@ class PropertyService {
         select: "registeredBy",
       })
       .skip((page - 1) * limit)
-      .limit(Number(limit))
-      .select(
-        "title description address price rentPrice numberOfUnits propertyType status"
-      );
+      .limit(Number(limit));
+    // .select(
+    //   "title description address price rentPrice numberOfUnits propertyType status"
+    // );
 
     const totalProperties = await Property.countDocuments(searchQuery);
     return {

@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 
 import { errorResponse, successResponse } from "../utils/apiResponse";
 import { tenantService } from "../services/tenant.services";
@@ -9,11 +9,6 @@ class TenantController {
       const files = req.files as Express.Multer.File[];
       const user = req.user;
       const tenantData = req.body;
-
-      console.log("====================================");
-      console.log(tenantData);
-      console.log(user);
-      console.log("====================================");
 
       // Create tenant and corresponding user
       const newTenant = await tenantService.createTenant(
@@ -127,6 +122,30 @@ class TenantController {
       res
         .status(500)
         .json(errorResponse(error.message, "Failed to generate tenant report"));
+    }
+  }
+
+  public async getTenantsByUserAdmin(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { registeredBy } = req.params;
+      const tenants = await tenantService.getTenantsByUserAdmin(
+        registeredBy,
+        req.query
+      );
+
+      res
+        .status(201)
+        .json(successResponse(tenants, "Tenants fetched successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(error.message, "Failed to fetch tenant from admin ")
+        );
     }
   }
 }

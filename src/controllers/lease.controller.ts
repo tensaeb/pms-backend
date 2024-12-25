@@ -6,7 +6,7 @@ import { User } from "../models/user.model";
 class LeaseController {
   public async createLease(req: Request, res: Response): Promise<void> {
     try {
-      const user = req.user;
+      const user = req.user?.id;
       const files = req.files as Express.Multer.File[];
       const newLease = await leaseService.createLease(req.body, files, user);
 
@@ -143,6 +143,27 @@ class LeaseController {
       res
         .status(500)
         .json(errorResponse(error.message, "Failed to generate report"));
+    }
+  }
+
+  public async getLeasesByRegisteredBy(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredBy } = req.params;
+      const query = req.query;
+      const leases = await leaseService.getLeasesByRegisteredBy(
+        registeredBy,
+        query
+      );
+      res
+        .status(200)
+        .json(successResponse(leases, "leases fetched successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to fetch leases"));
     }
   }
 }
