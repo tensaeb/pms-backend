@@ -6,14 +6,16 @@ import { tenantService } from "../services/tenant.services";
 class TenantController {
   public async createTenant(req: Request, res: Response): Promise<void> {
     try {
-      const files = req.files as Express.Multer.File[];
+      // Correctly access files from multer fields
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const idProofFiles = files["idProof"] || [];
       const user = req.user;
       const tenantData = req.body;
 
-      // Create tenant and corresponding user
+      // Pass the idProof files to the service
       const newTenant = await tenantService.createTenant(
         tenantData,
-        files,
+        idProofFiles,
         user!.id
       );
 
@@ -73,6 +75,29 @@ class TenantController {
       res
         .status(500)
         .json(errorResponse(error.message, "Failed to update tenant"));
+    }
+  }
+  public async updateTenantUserPhoto(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const file = req.file as Express.Multer.File;
+      const updatedUser = await tenantService.updateTenantUserPhoto(
+        req.params.id,
+        file
+      );
+      res
+        .status(200)
+        .json(
+          successResponse(updatedUser, "Tenant user photo updated successfully")
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(error.message, "Failed to update tenant user photo")
+        );
     }
   }
 

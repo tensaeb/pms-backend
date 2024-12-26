@@ -58,28 +58,25 @@ router.get(
 router.put(
   "/:id",
   authenticate,
-  admin,
   upload.array("photos"),
   propertyController.updateProperty
 );
 
 // Delete a property by ID
-router.delete("/:id", authenticate, admin, propertyController.deleteProperty);
+router.delete("/:id", authenticate, propertyController.deleteProperty);
 
 // Edit a photo by ID
 router.put(
-  "/:propertyId/photo/:photoId",
+  "/:propertyId/photos/:photoId",
   authenticate,
-  admin,
   upload.single("photo"),
   propertyController.editPhoto
 );
 
 // Delete a photo by ID
 router.delete(
-  "/:propertyId/photo/:photoId",
+  "/:propertyId/photos/:photoId",
   authenticate,
-  admin,
   propertyController.deletePhoto
 );
 

@@ -26,18 +26,44 @@ class TenantService {
     const unhashedPassword = password || defaultPassword;
     const hashedPassword = await bcrypt.hash(unhashedPassword, 10);
 
-    // Create a new tenant in the tenant collection
+    // Create a new tenant without saving yet
     const newTenant = new Tenant({
       ...tenantData,
       password: hashedPassword,
       registeredBy: loggedInUserId,
     });
 
+    // Save the tenant first to get the ID
+    const savedTenant = await newTenant.save();
+
+    // Handle file uploads after saving tenant to use the correct ID
     if (files && files.length > 0) {
-      newTenant.idProof = files.map((file) => file.filename);
+      try {
+        const tenantFolder = path.join(
+          "uploads",
+          "tenants",
+          savedTenant.id.toString()
+        );
+        if (!fs.existsSync(tenantFolder)) {
+          fs.mkdirSync(tenantFolder, { recursive: true });
+        }
+
+        const idProofs = files.map((file) => {
+          const newPath = path.join(tenantFolder, file.filename);
+          fs.renameSync(file.path, newPath);
+          return newPath;
+        });
+
+        // Update the tenant with idProof paths
+        savedTenant.idProof = idProofs;
+        await savedTenant.save();
+      } catch (error) {
+        console.error("Error handling file uploads:", error);
+        throw new Error("Failed to process ID proof files");
+      }
     }
 
-    // Create a corresponding user with the "Tenant" role
+    // Create a corresponding user
     const newUser = new User({
       name: tenantName,
       email: contactInformation.email,
@@ -46,19 +72,30 @@ class TenantService {
       registeredBy: loggedInUserId,
     });
 
-    const savedUser = await newUser.save();
-    const userWithPassword = savedUser.toObject();
+    try {
+      const savedUser = await newUser.save();
+      const userWithPassword = savedUser.toObject();
 
-    // Save the tenant data
-    const savedTenant = await newTenant.save();
-
-    return {
-      tenant: savedTenant,
-      user: {
-        ...userWithPassword,
-        unhashedPassword,
-      } as UserWithUnhashedPassword,
-    };
+      return {
+        tenant: savedTenant,
+        user: {
+          ...userWithPassword,
+          unhashedPassword,
+        } as UserWithUnhashedPassword,
+      };
+    } catch (error) {
+      // Clean up uploaded files if user save fails
+      if (savedTenant.idProof) {
+        savedTenant.idProof.forEach((filePath) => {
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        });
+      }
+      // Delete the tenant if user creation fails
+      await Tenant.findByIdAndDelete(savedTenant._id);
+      throw error;
+    }
   }
 
   public async getAllTenants(query: any): Promise<{
@@ -131,8 +168,25 @@ class TenantService {
     updateData: Partial<ITenant>,
     files?: Express.Multer.File[]
   ) {
+    const tenant = await Tenant.findById(id);
+
+    if (!tenant) {
+      throw new Error("Tenant not found");
+    }
     if (files && files.length > 0) {
-      updateData.idProof = files.map((file) => file.filename);
+      const tenantFolder = path.join("uploads", "tenants", tenant.id);
+      if (!fs.existsSync(tenantFolder)) {
+        fs.mkdirSync(tenantFolder, { recursive: true });
+      }
+      const idProofs = files.map((file) => {
+        const newPath = path.join(tenantFolder, file.filename);
+        fs.renameSync(file.path, newPath);
+        return newPath;
+      });
+
+      tenant.set("idProof", idProofs);
+      // Merge updateData and idProofs
+      Object.assign(updateData, { idProof: tenant.idProof });
     }
 
     const updatedTenant = await Tenant.findByIdAndUpdate(id, updateData, {
@@ -145,13 +199,71 @@ class TenantService {
     return updatedTenant;
   }
 
+  public async updateTenantUserPhoto(
+    id: string,
+    photo: Express.Multer.File
+  ): Promise<IUser | null> {
+    const tenant = await Tenant.findById(id);
+    if (!tenant) {
+      throw new Error("Tenant not found");
+    }
+    const tenantUser = await User.findOne({
+      email: tenant.contactInformation.email,
+    });
+
+    if (!tenantUser) {
+      throw new Error("Tenant user not found");
+    }
+    const profileFolder = path.join("uploads", "profile", tenantUser.id);
+
+    // Ensure the profile folder exists
+    if (!fs.existsSync(profileFolder)) {
+      fs.mkdirSync(profileFolder, { recursive: true });
+    }
+    const newPhotoPath = path.join(profileFolder, photo.filename);
+
+    // If user has an existing photo, delete it
+    if (tenantUser.photo) {
+      try {
+        if (fs.existsSync(tenantUser.photo)) {
+          fs.unlinkSync(tenantUser.photo);
+        }
+      } catch (error) {
+        console.error("Error deleting previous profile picture: ", error);
+        // Log the error, but don't prevent the update from happening
+      }
+    }
+    //Move file to new folder
+    fs.renameSync(photo.path, newPhotoPath);
+    tenantUser.photo = newPhotoPath;
+
+    const updatedUser = await tenantUser.save();
+    return updatedUser;
+  }
+
   public async deleteTenant(id: string): Promise<ITenant | null> {
-    const tenant = await Tenant.findByIdAndDelete(id);
-    if (tenant && tenant.idProof && tenant.idProof.length > 0) {
+    const tenant = await Tenant.findById(id);
+
+    if (!tenant) {
+      return null; // Tenant not found, nothing to delete
+    }
+
+    // Delete the corresponding user based on email
+    await User.deleteOne({ email: tenant.contactInformation.email });
+
+    // Delete ID Proof files
+    if (tenant.idProof && tenant.idProof.length > 0) {
       tenant.idProof.forEach((proof) => {
-        fs.unlinkSync(proof);
+        if (fs.existsSync(proof)) {
+          // Check if the file exists before unlinking
+          fs.unlinkSync(proof);
+        }
       });
     }
+
+    //Finally delete the tenant itself
+    await Tenant.findByIdAndDelete(id);
+
     return tenant;
   }
 

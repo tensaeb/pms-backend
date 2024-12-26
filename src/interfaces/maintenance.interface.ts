@@ -15,6 +15,7 @@ export interface IMaintenance extends Document {
   preferredAccessTimes?: string;
   status?:
     | "Pending"
+    | "Approved"
     | "In Progress"
     | "Completed"
     | "Cancelled"

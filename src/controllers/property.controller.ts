@@ -141,7 +141,6 @@ class PropertyController {
         photoId,
         req.file
       );
-
       res
         .status(200)
         .json({ message: "Photo updated successfully", data: updatedProperty });
@@ -212,5 +211,4 @@ class PropertyController {
     }
   }
 }
-
 export const propertyController = new PropertyController();

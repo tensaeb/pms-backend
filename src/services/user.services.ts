@@ -8,6 +8,7 @@ import { Property } from "../models/property.model";
 import { Tenant } from "../models/tenant.model";
 import { Model, Types } from "mongoose";
 import { randomInt } from "crypto";
+import path from "path";
 
 // Define the return type for methods that need to include unhashedPassword
 export type UserWithUnhashedPassword = {
@@ -91,7 +92,14 @@ class UserService {
     }
 
     if (file) {
-      newUser.photo = file.filename;
+      const profileFolder = path.join("uploads", "profile", newUser.id);
+
+      if (!fs.existsSync(profileFolder)) {
+        fs.mkdirSync(profileFolder, { recursive: true });
+      }
+      const newPhotoPath = path.join(profileFolder, file.filename);
+      fs.renameSync(file.path, newPhotoPath);
+      newUser.photo = newPhotoPath;
     }
 
     const savedUser = await newUser.save();
@@ -130,7 +138,7 @@ class UserService {
     currentPage: number;
     totalUsers: number;
   }> {
-    const { page = 1, limit = 20, search = "", role, status } = query;
+    const { page = 1, limit = 10, search = "", role, status } = query;
 
     // Build the search query with optional filters
     const searchQuery: any = {
@@ -167,7 +175,7 @@ class UserService {
 
   // Get regular users with pagination and search
   public async getUsers(query: any) {
-    const { page = 1, limit = 5, search = "" } = query;
+    const { page = 1, limit = 10, search = "" } = query;
     const searchQuery: any = {
       $or: [
         { name: { $regex: search, $options: "i" } },
@@ -201,7 +209,7 @@ class UserService {
     currentPage: number;
     totalUsers: number;
   }> {
-    const { page = 1, limit = 20, search = "", role, status } = query;
+    const { page = 1, limit = 10, search = "", role, status } = query;
 
     const searchQuery: any = {
       registeredBy,
@@ -237,7 +245,7 @@ class UserService {
 
   // Get Super Admin users with pagination and search
   public async getSuperAdminUsers(query: any) {
-    const { page = 1, limit = 5, search = "" } = query;
+    const { page = 1, limit = 10, search = "" } = query;
     const searchQuery: any = {
       $or: [
         { name: { $regex: search, $options: "i" } },
@@ -264,7 +272,7 @@ class UserService {
 
   // Get Admin users with pagination and search
   public async getAdminUsers(query: any) {
-    const { page = 1, limit = 5, search = "" } = query;
+    const { page = 1, limit = 10, search = "" } = query;
     const searchQuery: any = {
       $or: [
         { name: { $regex: search, $options: "i" } },
@@ -299,7 +307,14 @@ class UserService {
   // Update user by ID
   async updateUser(id: string, updateData: any, file?: Express.Multer.File) {
     if (file) {
-      updateData.photo = file.filename;
+      const profileFolder = path.join("uploads", "profile", id);
+
+      if (!fs.existsSync(profileFolder)) {
+        fs.mkdirSync(profileFolder, { recursive: true });
+      }
+      const newPhotoPath = path.join(profileFolder, file.filename);
+      fs.renameSync(file.path, newPhotoPath);
+      updateData.photo = newPhotoPath;
     }
 
     const updatedUser = await User.findByIdAndUpdate(id, updateData, {
@@ -398,14 +413,17 @@ class UserService {
       if (!user) {
         throw new Error("User not found");
       }
+      const profileFolder = path.join("uploads", "profile", userId);
 
-      // Delete old photo if exists
+      if (!fs.existsSync(profileFolder)) {
+        fs.mkdirSync(profileFolder, { recursive: true });
+      }
+      const newPhotoPath = path.join(profileFolder, file.filename);
       if (user.photo) {
         await this.deletePhotoFile(user.photo);
       }
-
-      // Update with new photo
-      user.photo = file.path;
+      fs.renameSync(file.path, newPhotoPath);
+      user.photo = newPhotoPath;
       await user.save();
       return user;
     } catch (error) {

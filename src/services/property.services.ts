@@ -1,4 +1,5 @@
 // property.services.ts
+
 import { Property } from "../models/property.model";
 import { IProperty, IPhoto } from "../interfaces/property.interface";
 import fs from "fs";
@@ -35,12 +36,12 @@ class PropertyService {
     const photoPath = path.join(this.UPLOAD_DIR, fileName);
 
     await sharp(file.path).resize(800).toFile(photoPath);
-
-    fs.unlinkSync(file.path);
+    fs.unlinkSync(file.path); // Remove the temporary file
+    const photoUrl = `/uploads/properties/${fileName}`;
 
     return {
       id: photoId,
-      url: `/uploads/properties/${fileName}`,
+      url: photoUrl,
     };
   }
 
@@ -58,7 +59,6 @@ class PropertyService {
         })
       );
     }
-
     const newProperty = new Property({
       ...propertyData,
       photos,
@@ -66,7 +66,6 @@ class PropertyService {
 
     return await newProperty.save();
   }
-
   async getAllImages(propertyId: string): Promise<IPhoto[]> {
     const property = await Property.findById(propertyId).select("photos");
     if (!property) {
@@ -99,10 +98,11 @@ class PropertyService {
     if (photoIndex === -1) throw new Error("Photo not found");
 
     const oldPhotoUrl = property.photos[photoIndex].url;
+
     if (!file) {
       throw new Error("New image not found, must upload a new image.");
     }
-    const newPhotoUrl = file.path;
+    const photo = await this.processImage(file);
 
     // Delete old file
     try {
@@ -114,8 +114,7 @@ class PropertyService {
       console.error("Error deleting old photo file: ", deleteError.message);
       // Note: We won't throw here as the file deletion is not crucial to image replacement.
     }
-
-    property.photos[photoIndex].url = newPhotoUrl;
+    property.photos[photoIndex].url = photo.url;
 
     const updatedProperty = await Property.findByIdAndUpdate(
       propertyId,
@@ -217,19 +216,31 @@ class PropertyService {
 
     return updatedProperty;
   }
-
   public async deleteProperty(id: string): Promise<void> {
     const property = await Property.findById(id);
     if (!property) throw new Error("Property not found");
 
     // Delete associated photos
-    property.photos.forEach((photo) => {
-      const filePath = path.join(process.cwd(), photo.url);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    });
-
+    if (property.photos && property.photos.length > 0) {
+      property.photos.forEach((photo) => {
+        if (photo && photo.url) {
+          // ADDED CHECK HERE
+          const filePath = path.join(process.cwd(), photo.url);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          } else {
+            console.warn(
+              `File not found at path: ${filePath} while deleting property: ${id}`
+            );
+          }
+        } else {
+          console.warn(
+            `Photo object or url is undefined while deleting property: ${id}`,
+            photo
+          );
+        }
+      });
+    }
     await Property.findByIdAndDelete(id);
   }
   public async getPropertiesByUserId(
@@ -299,5 +310,4 @@ class PropertyService {
     };
   }
 }
-
 export const propertyService = new PropertyService();
