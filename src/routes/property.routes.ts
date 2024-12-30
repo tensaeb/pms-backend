@@ -1,5 +1,5 @@
 import express from "express";
-import { admin, authenticate } from "../middlewares/authMiddleware";
+import { authenticate } from "../middlewares/authMiddleware";
 import { propertyController } from "../controllers/property.controller";
 import multer from "multer";
 import path from "path";
@@ -53,7 +53,18 @@ router.get(
   authenticate,
   propertyController.getPropertiesByUserAdminId
 );
-
+// New route for fetching properties by status
+router.get(
+  "/status/:status",
+  authenticate,
+  propertyController.getPropertiesByStatus
+);
+// New Route for fetching property by type
+router.get(
+  "/type/:propertyType",
+  authenticate,
+  propertyController.getPropertiesByType
+);
 // Update a property by ID
 router.put(
   "/:id",

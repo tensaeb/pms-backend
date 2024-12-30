@@ -1,5 +1,10 @@
+// property.model.ts
 import { Schema, model } from "mongoose";
-import { IPhoto, IProperty } from "../interfaces/property.interface";
+import {
+  IPhoto,
+  IProperty,
+  PropertyType,
+} from "../interfaces/property.interface";
 
 const photoSchema = new Schema<IPhoto>({
   id: { type: String, required: true },
@@ -15,7 +20,11 @@ const propertySchema = new Schema<IProperty>(
     price: { type: Number, required: true },
     rentPrice: { type: Number },
     numberOfUnits: { type: Number, required: true },
-    propertyType: { type: String, required: true },
+    propertyType: {
+      type: String,
+      enum: Object.values(PropertyType),
+      required: true,
+    },
     floorPlan: { type: String },
     amenities: [String],
     status: {
@@ -28,9 +37,7 @@ const propertySchema = new Schema<IProperty>(
         "leased",
         "sold",
       ],
-      default: "open",
     },
-
     photos: { type: [photoSchema], default: [] },
   },
   { timestamps: true }

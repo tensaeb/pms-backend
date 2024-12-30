@@ -7,6 +7,7 @@ import {
   errorResponse,
   successResponse,
 } from "../utils/apiResponse";
+import { PropertyTypeValue } from "../interfaces/property.interface";
 
 class PropertyController {
   // Create a new property
@@ -208,6 +209,60 @@ class PropertyController {
       res
         .status(500)
         .json(errorResponse(error.message, "Failed to fetch properties"));
+    }
+  }
+  //Get properties by status
+  public async getPropertiesByStatus(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { status } = req.params;
+
+      const properties = await propertyService.getPropertiesByStatus(
+        status as
+          | "leased"
+          | "open"
+          | "closed"
+          | "reserved"
+          | "under maintenance"
+          | "sold",
+        req.query
+      );
+      res
+        .status(200)
+        .json(
+          successResponse(
+            properties,
+            "Properties fetched Successfully by status"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(error.message, "Failed to get properties by Status")
+        );
+    }
+  }
+  //get properties by Type
+  public async getPropertiesByType(req: Request, res: Response): Promise<void> {
+    try {
+      const { propertyType } = req.params;
+
+      const properties = await propertyService.getPropertiesByType(
+        propertyType as PropertyTypeValue,
+        req.query
+      );
+      res
+        .status(200)
+        .json(
+          successResponse(properties, "Property fetched Successfully by type")
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to get property by type"));
     }
   }
 }

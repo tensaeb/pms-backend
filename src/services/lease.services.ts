@@ -1,3 +1,4 @@
+// lease.service.ts
 import { ILease } from "../interfaces/lease.interface";
 import { Lease } from "../models/lease.model";
 import fs from "fs";
@@ -6,8 +7,8 @@ import { Parser } from "json2csv";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { ITenant } from "../interfaces/tenant.interface";
 import { IProperty } from "../interfaces/property.interface";
-import { DecodedToken } from "../middlewares/authMiddleware";
 import { User } from "../models/user.model";
+import { propertyService } from "./property.services";
 
 class LeaseService {
   public async createLease(
@@ -15,15 +16,37 @@ class LeaseService {
     files?: Express.Multer.File[],
     user?: string | undefined
   ): Promise<ILease> {
+    const { property } = leaseData;
+
+    if (!property) {
+      throw new Error("Property Id is required");
+    }
+
     const newLease = new Lease({ ...leaseData, user: user });
 
     if (files && files.length > 0) {
       newLease.documents = files.map((file) => file.filename);
     }
 
-    return await newLease.save();
-  }
+    try {
+      const savedLease = await newLease.save();
 
+      // Update property status to 'leased'
+      await propertyService.updatePropertyStatus(
+        property.toString(),
+        "reserved"
+      );
+
+      return savedLease;
+    } catch (error) {
+      //revert property status to open
+      if (property) {
+        await propertyService.updatePropertyStatus(property.toString(), "open");
+      }
+      throw error;
+    }
+  }
+  // ... rest of your methods remains the same
   public async getAllLeases(query: any): Promise<{
     leases: Partial<ILease>[];
     totalPages: number;

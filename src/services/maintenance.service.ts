@@ -6,6 +6,7 @@ import * as path from "path";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { Parser } from "json2csv";
 import sharp from "sharp";
+import { propertyService } from "./property.services";
 
 class MaintenanceService {
   private readonly UPLOAD_DIR = path.join(
@@ -103,6 +104,22 @@ class MaintenanceService {
     scheduledDate?: Date,
     estimatedCompletionTime?: Date
   ): Promise<IMaintenance | null> {
+    const maintenance = await Maintenance.findById(id).populate("property");
+
+    if (!maintenance || !maintenance.property) {
+      throw new Error(
+        "Maintenance request not found or has not linked property"
+      );
+    }
+
+    const property = maintenance.property as any;
+    const originalPropertyStatus = property.status;
+
+    await propertyService.updatePropertyStatus(
+      property._id.toString(),
+      "under maintenance"
+    );
+
     const updatedMaintenance = await Maintenance.findByIdAndUpdate(
       id,
       {
@@ -110,17 +127,22 @@ class MaintenanceService {
         status: "In Progress",
         scheduledDate: scheduledDate,
         estimatedCompletionTime: estimatedCompletionTime,
+        originalPropertyStatus, // Store original property status
       },
       { new: true }
     ).populate("assignedMaintainer");
-
     if (!updatedMaintenance) {
+      // revert property status back
+      await propertyService.updatePropertyStatus(
+        property._id.toString(),
+        originalPropertyStatus
+      );
+
       throw new Error("Maintenance request not found");
     }
 
     return updatedMaintenance;
   }
-
   // Function to get all maintenances assigned to a maintainer
   public async getMaintenancesByMaintainer(
     maintainerId: string
@@ -164,6 +186,20 @@ class MaintenanceService {
       feedback?: string;
     }
   ): Promise<IMaintenance | null> {
+    const maintenance = await Maintenance.findById(id).populate("property");
+    if (!maintenance || !maintenance.property) {
+      throw new Error(
+        "Maintenance request not found or has no linked property"
+      );
+    }
+    const property = maintenance.property as any;
+
+    const originalPropertyStatus = maintenance.originalPropertyStatus || "open"; // provide open default status in case the value isn't persisted
+
+    await propertyService.updatePropertyStatus(
+      property._id.toString(),
+      originalPropertyStatus
+    );
     const updatedMaintenance = await Maintenance.findByIdAndUpdate(
       id,
       {
@@ -176,6 +212,11 @@ class MaintenanceService {
     );
 
     if (!updatedMaintenance) {
+      //Revert back in case the inspection fails
+      await propertyService.updatePropertyStatus(
+        property._id.toString(),
+        "open"
+      );
       throw new Error("Maintenance request not found");
     }
 

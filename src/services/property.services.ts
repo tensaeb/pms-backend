@@ -1,13 +1,14 @@
-// property.services.ts
-
 import { Property } from "../models/property.model";
-import { IProperty, IPhoto } from "../interfaces/property.interface";
 import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import sharp from "sharp";
-import { Document, Packer, Paragraph, TextRun } from "docx";
 import { Parser } from "@json2csv/plainjs";
+import {
+  IPhoto,
+  IProperty,
+  PropertyTypeValue,
+} from "../interfaces/property.interface";
 
 class PropertyService {
   private readonly parser = new Parser();
@@ -171,12 +172,11 @@ class PropertyService {
     if (propertyType) {
       searchQuery.propertyType = propertyType;
     }
-
     const [properties, totalProperties] = await Promise.all([
       Property.find(searchQuery)
+        .select("-__v")
         .skip((page - 1) * limit)
-        .limit(Number(limit))
-        .lean(),
+        .limit(Number(limit)),
       Property.countDocuments(searchQuery),
     ]);
 
@@ -185,13 +185,18 @@ class PropertyService {
       totalPages: Math.ceil(totalProperties / limit),
       currentPage: Number(page),
       totalProperties,
+      numberOfProperties: properties.length,
     };
   }
 
-  public async getPropertyById(id: string): Promise<IProperty> {
-    const property = await Property.findById(id);
+  public async getPropertyById(
+    id: string
+  ): Promise<IProperty & { numberOfProperties?: number }> {
+    const property = await Property.findById(id).select("-__v");
     if (!property) throw new Error("Property not found");
-    return property;
+    return { ...property.toObject(), numberOfProperties: 1 } as IProperty & {
+      numberOfProperties?: number;
+    };
   }
 
   public async updateProperty(
@@ -251,6 +256,7 @@ class PropertyService {
     totalPages: number;
     currentPage: number;
     totalProperties: number;
+    numberOfProperties: number;
   }> {
     const { page = 1, limit = 10, search = "" } = query;
 
@@ -258,18 +264,20 @@ class PropertyService {
       userCreated: userId,
       $or: [{ title: { $regex: search, $options: "i" } }],
     };
-
-    const properties = await Property.find(searchQuery)
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
-
-    const totalProperties = await Property.countDocuments(searchQuery);
+    const [properties, totalProperties] = await Promise.all([
+      Property.find(searchQuery)
+        .select("-__v")
+        .skip((page - 1) * limit)
+        .limit(Number(limit)),
+      Property.countDocuments(searchQuery),
+    ]);
 
     return {
       properties,
       totalPages: Math.ceil(totalProperties / limit),
       currentPage: Number(page),
       totalProperties,
+      numberOfProperties: properties.length,
     };
   }
 
@@ -281,6 +289,7 @@ class PropertyService {
     totalPages: number;
     currentPage: number;
     totalProperties: number;
+    numberOfProperties: number;
   }> {
     const { page = 1, limit = 10, search = "" } = query;
 
@@ -290,24 +299,119 @@ class PropertyService {
       $or: [{ title: { $regex: search, $options: "i" } }],
     };
 
-    const properties = await Property.find(searchQuery)
-      .populate({
-        path: "userCreated",
-        select: "registeredBy",
-      })
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
-    // .select(
-    //   "title description address price rentPrice numberOfUnits propertyType status"
-    // );
-
-    const totalProperties = await Property.countDocuments(searchQuery);
+    const [properties, totalProperties] = await Promise.all([
+      Property.find(searchQuery)
+        .populate({
+          path: "userCreated",
+          select: "registeredBy",
+        })
+        .select("-__v")
+        .skip((page - 1) * limit)
+        .limit(Number(limit)),
+      Property.countDocuments(searchQuery),
+    ]);
     return {
       properties,
       totalPages: Math.ceil(totalProperties / limit),
       currentPage: Number(page),
       totalProperties,
+      numberOfProperties: properties.length,
     };
+  }
+  public async getPropertiesByStatus(
+    status:
+      | "leased"
+      | "open"
+      | "closed"
+      | "reserved"
+      | "under maintenance"
+      | "sold",
+    query: { page?: number; limit?: number; search?: string } = {}
+  ): Promise<{
+    properties: Partial<IProperty>[];
+    totalPages: number;
+    currentPage: number;
+    totalProperties: number;
+    numberOfProperties: number;
+  }> {
+    const { page = 1, limit = 10, search = "" } = query;
+
+    const searchQuery: any = {
+      status: status,
+      title: { $regex: search, $options: "i" },
+    };
+    const [properties, totalProperties] = await Promise.all([
+      Property.find(searchQuery)
+        .select("-__v")
+        .skip((page - 1) * limit)
+        .limit(Number(limit)),
+      Property.countDocuments(searchQuery),
+    ]);
+
+    return {
+      properties,
+      totalPages: Math.ceil(totalProperties / limit),
+      currentPage: Number(page),
+      totalProperties,
+      numberOfProperties: properties.length,
+    };
+  }
+  public async getPropertiesByType(
+    propertyType: PropertyTypeValue,
+    query: { page?: number; limit?: number; search?: string } = {}
+  ): Promise<{
+    properties: Partial<IProperty>[];
+    totalPages: number;
+    currentPage: number;
+    totalProperties: number;
+    numberOfProperties: number;
+  }> {
+    const { page = 1, limit = 10, search = "" } = query;
+    const searchQuery: any = {
+      propertyType: propertyType,
+      title: { $regex: search, $options: "i" },
+    };
+    const [properties, totalProperties] = await Promise.all([
+      Property.find(searchQuery)
+        .select("-__v")
+        .skip((page - 1) * limit)
+        .limit(Number(limit)),
+      Property.countDocuments(searchQuery),
+    ]);
+
+    return {
+      properties,
+      totalPages: Math.ceil(totalProperties / limit),
+      currentPage: Number(page),
+      totalProperties,
+      numberOfProperties: properties.length,
+    };
+  }
+
+  public async updatePropertyStatus(
+    propertyId: string,
+    status:
+      | "leased"
+      | "open"
+      | "closed"
+      | "reserved"
+      | "under maintenance"
+      | "sold"
+  ) {
+    try {
+      const updatedProperty = await Property.findByIdAndUpdate(
+        propertyId,
+        { status: status },
+        { new: true }
+      );
+      if (!updatedProperty) {
+        throw new Error(`Property with id ${propertyId} not found`);
+      }
+      return updatedProperty;
+    } catch (error) {
+      console.error(`Error updating property status to ${status}`, error);
+      throw error;
+    }
   }
 }
 export const propertyService = new PropertyService();

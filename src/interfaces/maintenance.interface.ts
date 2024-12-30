@@ -1,8 +1,9 @@
+// maintenance.interface.ts
+
 import { Document, Types } from "mongoose";
 
 export interface IMaintenance extends Document {
   tenant: Types.ObjectId;
-  mainteneceUser: Types.ObjectId;
   property: Types.ObjectId;
   typeOfRequest:
     | "Plumbing"
@@ -13,7 +14,7 @@ export interface IMaintenance extends Document {
   description: string;
   urgencyLevel: "Urgent" | "Routine" | "Non-Urgent";
   preferredAccessTimes?: string;
-  status?:
+  status:
     | "Pending"
     | "Approved"
     | "In Progress"
@@ -21,21 +22,27 @@ export interface IMaintenance extends Document {
     | "Cancelled"
     | "Inspected"
     | "Incomplete";
-
-  approvalStatus?: "Pending" | "Approved" | "Rejected";
-  assignedMaintainer: Types.ObjectId;
-  scheduledDate: Date;
-  assignedTo?: string;
-  expense: number;
-  inspectedBy: Types.ObjectId;
-  inspectionDate?: Date;
+  approvalStatus: "Pending" | "Approved" | "Rejected";
+  assignedMaintainer?: Types.ObjectId;
+  scheduledDate?: Date;
   priorityLevel?: "Low" | "Medium" | "High";
   estimatedCompletionTime?: Date;
   notes?: string;
+  expense?: number;
+  inspectedBy?: Types.ObjectId;
+  inspectionDate?: Date;
   requestedFiles?: string[];
   inspectedFiles?: string[];
-  feedback: string;
-  requestDate: Date;
+  feedback?: string;
+  requestDate?: Date; //Added request Date
+  originalPropertyStatus?:
+    | "open"
+    | "reserved"
+    | "closed"
+    | "under maintenance"
+    | "leased"
+    | "sold";
+
   createdAt?: Date;
   updatedAt?: Date;
 }
