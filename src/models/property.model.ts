@@ -29,14 +29,7 @@ const propertySchema = new Schema<IProperty>(
     amenities: [String],
     status: {
       type: String,
-      enum: [
-        "open",
-        "reserved",
-        "closed",
-        "under maintenance",
-        "leased",
-        "sold",
-      ],
+      enum: ["open", "reserved", "closed", "under maintenance", "sold"],
     },
     photos: { type: [photoSchema], default: [] },
   },

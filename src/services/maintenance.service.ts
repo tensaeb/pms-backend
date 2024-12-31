@@ -6,7 +6,9 @@ import * as path from "path";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { Parser } from "json2csv";
 import sharp from "sharp";
-import { propertyService } from "./property.services";
+import { propertyService } from "../services/property.services";
+import { PropertyStatus, isPropertyStatus } from "../utils/typeCheckers";
+import { Property } from "../models/property.model";
 
 class MaintenanceService {
   private readonly UPLOAD_DIR = path.join(
@@ -60,6 +62,12 @@ class MaintenanceService {
       notes,
     } = maintenanceData;
 
+    const checkProperty = await Property.findById(property);
+
+    if (!checkProperty) {
+      throw new Error("Property not found");
+    }
+
     const newMaintenance = new Maintenance({
       tenant,
       property,
@@ -104,7 +112,7 @@ class MaintenanceService {
     scheduledDate?: Date,
     estimatedCompletionTime?: Date
   ): Promise<IMaintenance | null> {
-    const maintenance = await Maintenance.findById(id).populate("property");
+    const maintenance = await Maintenance.findById(id);
 
     if (!maintenance || !maintenance.property) {
       throw new Error(
@@ -112,11 +120,20 @@ class MaintenanceService {
       );
     }
 
-    const property = maintenance.property as any;
-    const originalPropertyStatus = property.status;
+    //Convert the id to string as this is how your property database UUID is stored.
+    const propertyId = maintenance.property.toString();
+
+    // Check if originalPropertyStatus is valid, or default to "open"
+    let originalPropertyStatus: PropertyStatus = "open";
+    if (
+      maintenance.originalPropertyStatus &&
+      isPropertyStatus(maintenance.originalPropertyStatus)
+    ) {
+      originalPropertyStatus = maintenance.originalPropertyStatus;
+    }
 
     await propertyService.updatePropertyStatus(
-      property._id.toString(),
+      propertyId, // Pass the ID as string.
       "under maintenance"
     );
 
@@ -134,7 +151,7 @@ class MaintenanceService {
     if (!updatedMaintenance) {
       // revert property status back
       await propertyService.updatePropertyStatus(
-        property._id.toString(),
+        propertyId,
         originalPropertyStatus
       );
 
@@ -143,6 +160,7 @@ class MaintenanceService {
 
     return updatedMaintenance;
   }
+
   // Function to get all maintenances assigned to a maintainer
   public async getMaintenancesByMaintainer(
     maintainerId: string
@@ -192,14 +210,24 @@ class MaintenanceService {
         "Maintenance request not found or has no linked property"
       );
     }
-    const property = maintenance.property as any;
 
-    const originalPropertyStatus = maintenance.originalPropertyStatus || "open"; // provide open default status in case the value isn't persisted
+    //Convert the id to string as this is how your property database UUID is stored.
+    const property = maintenance.property.toString();
+
+    // Ensure a default value for originalPropertyStatus.
+    let originalPropertyStatus: PropertyStatus = "open";
+    if (
+      maintenance.originalPropertyStatus &&
+      isPropertyStatus(maintenance.originalPropertyStatus)
+    ) {
+      originalPropertyStatus = maintenance.originalPropertyStatus;
+    }
 
     await propertyService.updatePropertyStatus(
-      property._id.toString(),
+      property,
       originalPropertyStatus
     );
+
     const updatedMaintenance = await Maintenance.findByIdAndUpdate(
       id,
       {
@@ -213,10 +241,7 @@ class MaintenanceService {
 
     if (!updatedMaintenance) {
       //Revert back in case the inspection fails
-      await propertyService.updatePropertyStatus(
-        property._id.toString(),
-        "open"
-      );
+      await propertyService.updatePropertyStatus(property, "open");
       throw new Error("Maintenance request not found");
     }
 

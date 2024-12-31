@@ -75,10 +75,19 @@ router.get(
 );
 
 // Update permissions
-router.put("/:userId/permissions", userController.updatePermissions);
+router.put(
+  "/:userId/permissions",
+  authenticate,
+  userController.updatePermissions
+);
 
 router.get("/:id", authenticate, userController.getUserById);
-router.put("/:id", authenticate, userController.updateUserById);
+router.put(
+  "/:id",
+  authenticate,
+  upload.single("photo"),
+  userController.updateUserById
+);
 // Route to reset password
 router.put(
   "/:userId/reset-password",
@@ -93,5 +102,10 @@ router.delete(
   userController.deleteUserWithConnections
 );
 router.delete("/:id", authenticate, userController.deleteUser);
-
+// New route for recursive user inactivation
+router.put(
+  "/deactivate-recursive/:userId",
+  authenticate,
+  userController.recursivelyInactiveUsers
+);
 export default router;

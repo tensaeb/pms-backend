@@ -1,14 +1,17 @@
 import { Property } from "../models/property.model";
+import {
+  IProperty,
+  IPhoto,
+  PropertyType,
+  PropertyTypeValue,
+} from "../interfaces/property.interface";
 import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import sharp from "sharp";
+import { Document, Packer, Paragraph, TextRun } from "docx";
 import { Parser } from "@json2csv/plainjs";
-import {
-  IPhoto,
-  IProperty,
-  PropertyTypeValue,
-} from "../interfaces/property.interface";
+import { PropertyStatus, isPropertyStatus } from "../utils/typeCheckers";
 
 class PropertyService {
   private readonly parser = new Parser();
@@ -63,7 +66,7 @@ class PropertyService {
     const newProperty = new Property({
       ...propertyData,
       photos,
-    });
+    } as IProperty); // Added assertion to fix typescript errors due to type mismatches and to match the structure we defined for SQL model
 
     return await newProperty.save();
   }
@@ -172,11 +175,12 @@ class PropertyService {
     if (propertyType) {
       searchQuery.propertyType = propertyType;
     }
+
     const [properties, totalProperties] = await Promise.all([
       Property.find(searchQuery)
-        .select("-__v")
         .skip((page - 1) * limit)
-        .limit(Number(limit)),
+        .limit(Number(limit))
+        .lean(),
       Property.countDocuments(searchQuery),
     ]);
 
@@ -189,14 +193,10 @@ class PropertyService {
     };
   }
 
-  public async getPropertyById(
-    id: string
-  ): Promise<IProperty & { numberOfProperties?: number }> {
-    const property = await Property.findById(id).select("-__v");
+  public async getPropertyById(id: string): Promise<IProperty> {
+    const property = await Property.findById(id);
     if (!property) throw new Error("Property not found");
-    return { ...property.toObject(), numberOfProperties: 1 } as IProperty & {
-      numberOfProperties?: number;
-    };
+    return property;
   }
 
   public async updateProperty(
@@ -264,11 +264,13 @@ class PropertyService {
       userCreated: userId,
       $or: [{ title: { $regex: search, $options: "i" } }],
     };
+
     const [properties, totalProperties] = await Promise.all([
       Property.find(searchQuery)
         .select("-__v")
         .skip((page - 1) * limit)
-        .limit(Number(limit)),
+        .limit(Number(limit))
+        .lean(),
       Property.countDocuments(searchQuery),
     ]);
 
@@ -307,7 +309,8 @@ class PropertyService {
         })
         .select("-__v")
         .skip((page - 1) * limit)
-        .limit(Number(limit)),
+        .limit(Number(limit))
+        .lean(),
       Property.countDocuments(searchQuery),
     ]);
     return {
@@ -318,14 +321,28 @@ class PropertyService {
       numberOfProperties: properties.length,
     };
   }
+
+  public async updatePropertyStatus(propertyId: string, status: string) {
+    try {
+      const property = await Property.findById(propertyId);
+
+      if (!property) {
+        throw new Error(`Property with id ${propertyId} not found`);
+      }
+
+      if (!isPropertyStatus(status)) {
+        throw new Error(`${status} is not a valid property status`);
+      }
+      property.status = status;
+      await property.save();
+      return property;
+    } catch (error) {
+      console.error(`Error updating property status to ${status}`, error);
+      throw error;
+    }
+  }
   public async getPropertiesByStatus(
-    status:
-      | "leased"
-      | "open"
-      | "closed"
-      | "reserved"
-      | "under maintenance"
-      | "sold",
+    status: PropertyStatus,
     query: { page?: number; limit?: number; search?: string } = {}
   ): Promise<{
     properties: Partial<IProperty>[];
@@ -340,11 +357,12 @@ class PropertyService {
       status: status,
       title: { $regex: search, $options: "i" },
     };
+
     const [properties, totalProperties] = await Promise.all([
       Property.find(searchQuery)
-        .select("-__v")
         .skip((page - 1) * limit)
-        .limit(Number(limit)),
+        .limit(Number(limit))
+        .lean(),
       Property.countDocuments(searchQuery),
     ]);
 
@@ -356,6 +374,7 @@ class PropertyService {
       numberOfProperties: properties.length,
     };
   }
+
   public async getPropertiesByType(
     propertyType: PropertyTypeValue,
     query: { page?: number; limit?: number; search?: string } = {}
@@ -367,15 +386,17 @@ class PropertyService {
     numberOfProperties: number;
   }> {
     const { page = 1, limit = 10, search = "" } = query;
+
     const searchQuery: any = {
       propertyType: propertyType,
       title: { $regex: search, $options: "i" },
     };
+
     const [properties, totalProperties] = await Promise.all([
       Property.find(searchQuery)
-        .select("-__v")
         .skip((page - 1) * limit)
-        .limit(Number(limit)),
+        .limit(Number(limit))
+        .lean(),
       Property.countDocuments(searchQuery),
     ]);
 
@@ -386,32 +407,6 @@ class PropertyService {
       totalProperties,
       numberOfProperties: properties.length,
     };
-  }
-
-  public async updatePropertyStatus(
-    propertyId: string,
-    status:
-      | "leased"
-      | "open"
-      | "closed"
-      | "reserved"
-      | "under maintenance"
-      | "sold"
-  ) {
-    try {
-      const updatedProperty = await Property.findByIdAndUpdate(
-        propertyId,
-        { status: status },
-        { new: true }
-      );
-      if (!updatedProperty) {
-        throw new Error(`Property with id ${propertyId} not found`);
-      }
-      return updatedProperty;
-    } catch (error) {
-      console.error(`Error updating property status to ${status}`, error);
-      throw error;
-    }
   }
 }
 export const propertyService = new PropertyService();

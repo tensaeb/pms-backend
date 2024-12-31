@@ -220,13 +220,7 @@ class PropertyController {
       const { status } = req.params;
 
       const properties = await propertyService.getPropertiesByStatus(
-        status as
-          | "leased"
-          | "open"
-          | "closed"
-          | "reserved"
-          | "under maintenance"
-          | "sold",
+        status as "open" | "closed" | "reserved" | "under maintenance" | "sold",
         req.query
       );
       res

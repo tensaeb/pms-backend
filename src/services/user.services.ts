@@ -16,6 +16,37 @@ export type UserWithUnhashedPassword = {
 } & ReturnType<Model<IUser>["hydrate"]>;
 
 class UserService {
+  // Private helper to check for active end and change user status
+  private async checkAndSetUserActiveStatus(user: IUser): Promise<IUser> {
+    if (user.role === "SuperAdmin") {
+      return user;
+    }
+
+    if (user.activeEnd) {
+      if (user.activeEnd < new Date()) {
+        user.status = "inactive";
+        await this.recursivelyDeactivateUsers(user.id.toString());
+      } else {
+        user.status = "active";
+      }
+    }
+
+    return await user.save();
+  }
+  private async recursivelyDeactivateUsers(
+    registeredBy: string
+  ): Promise<void> {
+    const users = await User.find({ registeredBy });
+
+    for (const user of users) {
+      if (user.role !== "SuperAdmin") {
+        user.status = "inactive";
+        await user.save();
+        await this.recursivelyDeactivateUsers(user.id.toString());
+      }
+    }
+  }
+
   // Create a SuperUser if the database is empty
   public async createSuperUser(
     userData: Partial<IUser>,
@@ -82,15 +113,6 @@ class UserService {
       registeredBy: loggedInUserId,
     });
 
-    if (userData.role === "Admin") {
-      const today = new Date();
-      const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-      const endOfDay = new Date(today.setHours(23, 59, 59, 999));
-
-      newUser.activeStart = startOfDay;
-      newUser.activeEnd = endOfDay;
-    }
-
     if (file) {
       const profileFolder = path.join("uploads", "profile", newUser.id);
 
@@ -126,9 +148,7 @@ class UserService {
     user.password = hashedPassword;
     user.status = "active";
 
-    await user.save();
-
-    return user;
+    return await user.save();
   }
 
   // Get all users with pagination, search, and filtering
@@ -162,11 +182,14 @@ class UserService {
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .select("name email phoneNumber role status");
+    const updatedUsers = await Promise.all(
+      users.map(async (user) => this.checkAndSetUserActiveStatus(user))
+    );
 
     const totalUsers = await User.countDocuments(searchQuery);
 
     return {
-      users,
+      users: updatedUsers,
       totalPages: Math.ceil(totalUsers / limit),
       currentPage: Number(page),
       totalUsers,
@@ -189,11 +212,14 @@ class UserService {
       .skip((page - 1) * limit)
       .limit(limit)
       .select("name email phoneNumber role photo status address");
+    const updatedUsers = await Promise.all(
+      users.map(async (user) => this.checkAndSetUserActiveStatus(user))
+    );
 
     const totalUsers = await User.countDocuments(searchQuery);
 
     return {
-      users,
+      users: updatedUsers,
       totalPages: Math.ceil(totalUsers / limit),
       currentPage: Number(page),
       totalUsers,
@@ -232,11 +258,13 @@ class UserService {
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .select("name email phoneNumber role status");
-
+    const updatedUsers = await Promise.all(
+      users.map(async (user) => this.checkAndSetUserActiveStatus(user))
+    );
     const totalUsers = await User.countDocuments(searchQuery);
 
     return {
-      users,
+      users: updatedUsers,
       totalPages: Math.ceil(totalUsers / limit),
       currentPage: Number(page),
       totalUsers,
@@ -260,10 +288,13 @@ class UserService {
       .limit(limit)
       .select("name email phoneNumber role photo status address");
 
+    const updatedUsers = await Promise.all(
+      users.map(async (user) => this.checkAndSetUserActiveStatus(user))
+    );
     const totalUsers = await User.countDocuments(searchQuery);
 
     return {
-      users,
+      users: updatedUsers,
       totalPages: Math.ceil(totalUsers / limit),
       currentPage: Number(page),
       totalUsers,
@@ -289,11 +320,13 @@ class UserService {
       .select(
         "name email phoneNumber role photo status address activeStart activeEnd"
       );
-
+    const updatedUsers = await Promise.all(
+      users.map(async (user) => this.checkAndSetUserActiveStatus(user))
+    );
     const totalUsers = await User.countDocuments(searchQuery);
 
     return {
-      users,
+      users: updatedUsers,
       totalPages: Math.ceil(totalUsers / limit),
       currentPage: Number(page),
       totalUsers,
@@ -301,11 +334,17 @@ class UserService {
   }
   // Get user by ID
   async getUserById(id: string) {
-    return await User.findById(id);
+    const user = await User.findById(id);
+    return await this.checkAndSetUserActiveStatus(user!);
   }
 
   // Update user by ID
   async updateUser(id: string, updateData: any, file?: Express.Multer.File) {
+    const user = await User.findById(id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
     if (file) {
       const profileFolder = path.join("uploads", "profile", id);
 
@@ -316,15 +355,10 @@ class UserService {
       fs.renameSync(file.path, newPhotoPath);
       updateData.photo = newPhotoPath;
     }
-
     const updatedUser = await User.findByIdAndUpdate(id, updateData, {
       new: true,
     });
-    if (!updatedUser) {
-      throw new Error("User not found");
-    }
-
-    return updatedUser;
+    return await this.checkAndSetUserActiveStatus(updatedUser!);
   }
 
   async getUsersRegisteredBy(loggedInUserId: string): Promise<IUser[]> {
@@ -332,9 +366,13 @@ class UserService {
       throw new Error("Logged-in user ID is required");
     }
 
-    return await User.find({ registeredBy: loggedInUserId }).select(
+    const users = await User.find({ registeredBy: loggedInUserId }).select(
       "name email phoneNumber role status address"
     );
+    const updatedUsers = await Promise.all(
+      users.map(async (user) => this.checkAndSetUserActiveStatus(user))
+    );
+    return updatedUsers;
   }
 
   //Items created by user
@@ -384,7 +422,6 @@ class UserService {
 
         await this.deleteUserWithConnections(connectedUserId); // Recursive call
       }
-
       // Delete the user
       await User.findByIdAndDelete(userId);
     } catch (error: any) {
@@ -402,9 +439,9 @@ class UserService {
     if (!user) throw new Error("User not found");
 
     user.permissions = { ...user.permissions, ...permissions };
-    await user.save();
+    const updatedUser = await user.save();
 
-    return user;
+    return this.checkAndSetUserActiveStatus(updatedUser);
   }
 
   async updateUserPhoto(userId: string, file: Express.Multer.File) {
@@ -424,8 +461,8 @@ class UserService {
       }
       fs.renameSync(file.path, newPhotoPath);
       user.photo = newPhotoPath;
-      await user.save();
-      return user;
+      const savedUser = await user.save();
+      return await this.checkAndSetUserActiveStatus(savedUser);
     } catch (error) {
       throw error;
     }
@@ -441,15 +478,27 @@ class UserService {
       if (user.photo) {
         await this.deletePhotoFile(user.photo);
         user.photo = undefined;
-        await user.save();
+        const updatedUser = await user.save();
+        return await this.checkAndSetUserActiveStatus(updatedUser);
       }
-
-      return user;
+      return await this.checkAndSetUserActiveStatus(user);
     } catch (error) {
       throw error;
     }
   }
+  public async recursivelyInactiveUsers(userId: string): Promise<void> {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
 
+    if (user.role === "SuperAdmin") {
+      throw new Error("Super Admins cannot be deactivated using this endpoint");
+    }
+    user.status = "inactive";
+    await user.save();
+    await this.recursivelyDeactivateUsers(user.id.toString());
+  }
   private async deletePhotoFile(photoPath: string) {
     try {
       if (fs.existsSync(photoPath)) {
@@ -459,6 +508,51 @@ class UserService {
       console.error("Error deleting photo file:", error);
       throw error;
     }
+  }
+
+  // Get users registered by logged-in user with pagination
+  public async getUsersRegisteredByUserId(
+    loggedInUserId: string,
+    query: any
+  ): Promise<{
+    users: Partial<IUser>[];
+    totalPages: number;
+    currentPage: number;
+    totalUsers: number;
+  }> {
+    const { page = 1, limit = 10, search = "", role, status } = query;
+    const searchQuery: any = {
+      registeredBy: loggedInUserId,
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { phoneNumber: { $regex: search, $options: "i" } },
+      ],
+    };
+
+    if (role) {
+      searchQuery.role = role;
+    }
+
+    if (status) {
+      searchQuery.status = status;
+    }
+
+    const users = await User.find(searchQuery)
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .select("name email phoneNumber role status");
+    const updatedUsers = await Promise.all(
+      users.map(async (user) => this.checkAndSetUserActiveStatus(user))
+    );
+    const totalUsers = await User.countDocuments(searchQuery);
+
+    return {
+      users: updatedUsers,
+      totalPages: Math.ceil(totalUsers / limit),
+      currentPage: Number(page),
+      totalUsers,
+    };
   }
 }
 

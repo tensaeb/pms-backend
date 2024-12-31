@@ -389,7 +389,6 @@ class UserController {
       next(error); // Pass error to the error-handling middleware
     }
   }
-
   async updatePermissions(req: Request, res: Response): Promise<void> {
     const { userId } = req.params;
     const { permissions } = req.body; // Expect an object with permission keys and boolean values
@@ -407,6 +406,27 @@ class UserController {
       res
         .status(500)
         .json(errorResponse(error.message, "Failed to update permissions"));
+    }
+  }
+  public async recursivelyInactiveUsers(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { userId } = req.params;
+      await userService.recursivelyInactiveUsers(userId);
+      res
+        .status(200)
+        .json(successResponse("", "Users and registered users made inactive"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to set users to inactive recursively"
+          )
+        );
     }
   }
 }
