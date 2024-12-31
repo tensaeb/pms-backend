@@ -554,6 +554,91 @@ class UserService {
       totalUsers,
     };
   }
+
+  //Get maintainers registered by a specific user
+  public async getMaintainersByRegisteredBy(
+    registeredBy: string,
+    query: any
+  ): Promise<{
+    users: Partial<IUser>[];
+    totalPages: number;
+    currentPage: number;
+    totalUsers: number;
+  }> {
+    const { page = 1, limit = 10, search = "", status } = query;
+
+    const searchQuery: any = {
+      registeredBy,
+      role: "Maintainer",
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { phoneNumber: { $regex: search, $options: "i" } },
+      ],
+    };
+    if (status) {
+      searchQuery.status = status;
+    }
+
+    const users = await User.find(searchQuery)
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .select("name email phoneNumber role status");
+    const updatedUsers = await Promise.all(
+      users.map(async (user) => this.checkAndSetUserActiveStatus(user))
+    );
+    const totalUsers = await User.countDocuments(searchQuery);
+
+    return {
+      users: updatedUsers,
+      totalPages: Math.ceil(totalUsers / limit),
+      currentPage: Number(page),
+      totalUsers,
+    };
+  }
+
+  //Get inspectors registered by a specific user
+
+  public async getInspectorsByRegisteredBy(
+    registeredBy: string,
+    query: any
+  ): Promise<{
+    users: Partial<IUser>[];
+    totalPages: number;
+    currentPage: number;
+    totalUsers: number;
+  }> {
+    const { page = 1, limit = 10, search = "", status } = query;
+
+    const searchQuery: any = {
+      registeredBy,
+      role: "Inspector",
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { phoneNumber: { $regex: search, $options: "i" } },
+      ],
+    };
+    if (status) {
+      searchQuery.status = status;
+    }
+
+    const users = await User.find(searchQuery)
+      .skip((page - 1) * limit)
+      .limit(Number(limit))
+      .select("name email phoneNumber role status");
+    const updatedUsers = await Promise.all(
+      users.map(async (user) => this.checkAndSetUserActiveStatus(user))
+    );
+    const totalUsers = await User.countDocuments(searchQuery);
+
+    return {
+      users: updatedUsers,
+      totalPages: Math.ceil(totalUsers / limit),
+      currentPage: Number(page),
+      totalUsers,
+    };
+  }
 }
 
 export const userService = new UserService();

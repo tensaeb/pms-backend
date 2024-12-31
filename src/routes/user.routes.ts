@@ -74,6 +74,20 @@ router.get(
   userController.getUsersByRegisteredBy
 );
 
+// Get maintainers by registeredBy ID
+router.get(
+  "/registeredBy/:registeredBy/maintainers",
+  authenticate,
+  userController.getMaintainersByRegisteredBy
+);
+
+// Get inspectors by registeredBy ID
+router.get(
+  "/registeredBy/:registeredBy/inspectors",
+  authenticate,
+  userController.getInspectorsByRegisteredBy
+);
+
 // Update permissions
 router.put(
   "/:userId/permissions",

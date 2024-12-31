@@ -429,6 +429,49 @@ class UserController {
         );
     }
   }
+
+  // Get maintainers by registeredBy with pagination
+  public async getMaintainersByRegisteredBy(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredBy } = req.params;
+      const query = req.query;
+      const users = await userService.getMaintainersByRegisteredBy(
+        registeredBy,
+        query
+      );
+      res
+        .status(200)
+        .json(successResponse(users, "Maintainers fetched successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to fetch maintainers"));
+    }
+  }
+  // Get inspectors by registeredBy with pagination
+  public async getInspectorsByRegisteredBy(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredBy } = req.params;
+      const query = req.query;
+      const users = await userService.getInspectorsByRegisteredBy(
+        registeredBy,
+        query
+      );
+      res
+        .status(200)
+        .json(successResponse(users, "Inspectors fetched successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to fetch inspectors"));
+    }
+  }
 }
 
 export const userController = new UserController();
