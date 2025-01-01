@@ -11,6 +11,7 @@ import rentInvoiceRoutes from "./rentInvoice.routes";
 import maintenanceRoutes from "./maintenance.route";
 import reportRoutes from "./report.routes";
 import complaintRoutes from "./complaint.route";
+import guestRoutes from "./guest.route";
 
 const router: Router = express.Router();
 
@@ -89,5 +90,6 @@ router.use("/rent-invoices", rentInvoiceRoutes);
 router.use("/maintenances", maintenanceRoutes);
 router.use("/reports", reportRoutes);
 router.use("/complaints", complaintRoutes);
+router.use("/guests", guestRoutes);
 
 export default router;

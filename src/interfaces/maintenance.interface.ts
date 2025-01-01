@@ -40,7 +40,6 @@ export interface IMaintenance extends Document {
     | "reserved"
     | "closed"
     | "under maintenance"
-    | "leased"
     | "sold";
 
   createdAt?: Date;

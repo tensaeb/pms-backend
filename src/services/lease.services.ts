@@ -1,4 +1,3 @@
-// lease.service.ts
 import { ILease } from "../interfaces/lease.interface";
 import { Lease } from "../models/lease.model";
 import fs from "fs";
@@ -11,6 +10,35 @@ import { User } from "../models/user.model";
 import { propertyService } from "./property.services";
 
 class LeaseService {
+  private readonly UPLOAD_DIR = path.join(process.cwd(), "uploads", "lease");
+
+  constructor() {
+    this.ensureDirectoriesExist();
+  }
+
+  private ensureDirectoriesExist(): void {
+    if (!fs.existsSync(this.UPLOAD_DIR)) {
+      fs.mkdirSync(this.UPLOAD_DIR, { recursive: true });
+    }
+  }
+
+  private async processFiles(
+    files: Express.Multer.File[],
+    userId: string
+  ): Promise<string[]> {
+    const userFolder = path.join(this.UPLOAD_DIR, userId);
+    if (!fs.existsSync(userFolder)) {
+      fs.mkdirSync(userFolder, { recursive: true });
+    }
+
+    const filePaths = files.map((file) => {
+      const filename = `${Date.now()}-${file.originalname}`;
+      const filePath = path.join(userFolder, filename);
+      fs.renameSync(file.path, filePath);
+      return `/uploads/lease/${userId}/${filename}`;
+    });
+    return filePaths;
+  }
   public async createLease(
     leaseData: Partial<ILease>,
     files?: Express.Multer.File[],
@@ -23,15 +51,20 @@ class LeaseService {
     }
 
     const newLease = new Lease({ ...leaseData, user: user });
-
-    if (files && files.length > 0) {
-      newLease.documents = files.map((file) => file.filename);
-    }
+    let savedLease;
 
     try {
-      const savedLease = await newLease.save();
+      if (files && files.length > 0) {
+        if (!user) {
+          throw new Error("User Id required");
+        }
 
-      // Update property status to 'leased'
+        const filePaths = await this.processFiles(files, user);
+        newLease.documents = filePaths;
+      }
+      savedLease = await newLease.save();
+
+      // Update property status to 'reserved'
       await propertyService.updatePropertyStatus(
         property.toString(),
         "reserved"
@@ -39,7 +72,7 @@ class LeaseService {
 
       return savedLease;
     } catch (error) {
-      //revert property status to open
+      // revert status
       if (property) {
         await propertyService.updatePropertyStatus(property.toString(), "open");
       }
