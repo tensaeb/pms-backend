@@ -12,6 +12,7 @@ import maintenanceRoutes from "./maintenance.route";
 import reportRoutes from "./report.routes";
 import complaintRoutes from "./complaint.route";
 import guestRoutes from "./guest.route";
+import clearanceRoutes from "./clearance.route";
 
 const router: Router = express.Router();
 
@@ -91,5 +92,6 @@ router.use("/maintenances", maintenanceRoutes);
 router.use("/reports", reportRoutes);
 router.use("/complaints", complaintRoutes);
 router.use("/guests", guestRoutes);
+router.use("/clearance", clearanceRoutes);
 
 export default router;

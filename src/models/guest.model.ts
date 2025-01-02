@@ -14,6 +14,7 @@ const guestSchema = new Schema<IGuest>(
     phoneNumber: { type: String, required: true },
     arrivalDate: { type: Date, required: true },
     departureDate: { type: Date },
+    reason: { type: String, required: true },
     qrCode: { type: String }, // Store the path/url to the QR code
     accessCode: { type: String },
     notes: { type: String },

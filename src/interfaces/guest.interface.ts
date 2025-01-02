@@ -8,6 +8,7 @@ export interface IGuest extends Document {
   phoneNumber: string;
   arrivalDate: Date;
   departureDate: Date;
+  reason: string;
   qrCode?: string;
   accessCode?: string;
   notes?: string;
