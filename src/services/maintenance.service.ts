@@ -170,6 +170,21 @@ class MaintenanceService {
       .populate("property")
       .populate("assignedMaintainer");
   }
+
+  // New function: Get completed maintenance requests with optional maintainer ID
+  public async getCompletedMaintenances(
+    maintainerId?: string
+  ): Promise<IMaintenance[]> {
+    const query: any = { status: "Completed" };
+    if (maintainerId) {
+      query.assignedMaintainer = maintainerId;
+    }
+    return await Maintenance.find(query)
+      .populate("tenant")
+      .populate("property")
+      .populate("assignedMaintainer");
+  }
+
   // Function to get all users with a maintainer role
   public async getMaintainersList(): Promise<any[]> {
     return await User.find({ role: "Maintainer" });

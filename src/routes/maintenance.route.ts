@@ -70,6 +70,12 @@ router.get(
 // Get list of maintainers
 router.get("/maintainers", admin, maintenanceController.getMaintainersList);
 
+// New route: Get completed maintenance requests with an optional maintainer ID
+router.get(
+  "/completed/:maintainerId?",
+  maintenanceController.getCompletedMaintenances
+);
+
 // Maintainer submits maintenance expense
 router.put("/expense/:id", maintenanceController.submitMaintenanceExpense);
 // Inspector Inspects Maintenance and mark as inspected

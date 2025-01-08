@@ -30,6 +30,7 @@ const propertySchema = new Schema<IProperty>(
     status: {
       type: String,
       enum: ["open", "reserved", "closed", "under maintenance", "sold"],
+      default: "open",
     },
     photos: { type: [photoSchema], default: [] },
   },

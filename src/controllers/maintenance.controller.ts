@@ -128,6 +128,32 @@ class MaintenanceController {
     }
   }
 
+  // Get completed maintenance requests with an optional maintainer ID
+  public async getCompletedMaintenances(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { maintainerId } = req.params;
+      const completedMaintenances =
+        await maintenanceService.getCompletedMaintenances(maintainerId);
+      res
+        .status(200)
+        .json(
+          successResponse(
+            completedMaintenances,
+            "Completed maintenances fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(error.message, "Failed to fetch completed maintenances")
+        );
+    }
+  }
+
   // Get all maintenance requests assigned to a maintainer
   public async getMaintenancesByMaintainer(
     req: Request,
