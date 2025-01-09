@@ -207,6 +207,7 @@ class MaintenanceService {
   }
 
   // Function for inspector to inspect and mark as inspected
+  // Function for inspector to inspect and mark as inspected
   public async inspectMaintenance(
     id: string,
     {
@@ -220,14 +221,21 @@ class MaintenanceService {
     }
   ): Promise<IMaintenance | null> {
     const maintenance = await Maintenance.findById(id).populate("property");
+
     if (!maintenance || !maintenance.property) {
       throw new Error(
         "Maintenance request not found or has no linked property"
       );
     }
 
-    //Convert the id to string as this is how your property database UUID is stored.
-    const property = maintenance.property.toString();
+    const property = maintenance.property as any;
+
+    if (!property._id) {
+      throw new Error("Property does not have an _id field");
+    }
+
+    // Convert the ID to a string as this is how your property database UUID is stored.
+    const propertyId = property._id.toString();
 
     // Ensure a default value for originalPropertyStatus.
     let originalPropertyStatus: PropertyStatus = "open";
@@ -239,7 +247,7 @@ class MaintenanceService {
     }
 
     await propertyService.updatePropertyStatus(
-      property,
+      propertyId,
       originalPropertyStatus
     );
 
@@ -255,8 +263,8 @@ class MaintenanceService {
     );
 
     if (!updatedMaintenance) {
-      //Revert back in case the inspection fails
-      await propertyService.updatePropertyStatus(property, "open");
+      // Revert back in case the inspection fails
+      await propertyService.updatePropertyStatus(propertyId, "open");
       throw new Error("Maintenance request not found");
     }
 

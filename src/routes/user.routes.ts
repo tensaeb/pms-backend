@@ -45,7 +45,7 @@ router.post(
 router.post(
   "/",
   authenticate,
-  admin,
+  // admin,
   upload.single("photo"),
   userController.createUser
 );
