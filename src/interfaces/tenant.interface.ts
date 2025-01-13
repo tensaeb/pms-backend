@@ -18,7 +18,7 @@ export interface ITenant extends Document {
     specialTerms?: string;
   };
   propertyInformation: {
-    unit: string;
+    unit?: string;
     propertyId: Schema.Types.ObjectId;
   };
   password: string;

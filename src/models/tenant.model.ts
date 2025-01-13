@@ -19,7 +19,7 @@ const tenantSchema = new Schema<ITenant>(
       specialTerms: { type: String },
     },
     propertyInformation: {
-      unit: { type: String, required: true },
+      unit: { type: String },
       propertyId: { type: Schema.Types.ObjectId, ref: "Property" },
     },
     idProof: {

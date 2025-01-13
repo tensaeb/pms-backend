@@ -19,6 +19,7 @@ class MaintenanceController {
               "Unauthorized: Only tenants can create maintenance requests"
             )
           );
+        return;
       }
 
       const uploadedFiles = req.files as Express.Multer.File[];
@@ -39,6 +40,8 @@ class MaintenanceController {
             "Maintenance request created successfully"
           )
         );
+
+      return;
     } catch (error: any) {
       console.error("Error creating maintenance request:", error);
       res

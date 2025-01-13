@@ -3,7 +3,7 @@ import { IMaintenance } from "../interfaces/maintenance.interface";
 
 const maintenanceSchema = new Schema<IMaintenance>(
   {
-    tenant: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
+    tenant: { type: Schema.Types.ObjectId, ref: "User", required: true },
     property: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     typeOfRequest: {
       type: String,

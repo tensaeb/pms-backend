@@ -106,22 +106,23 @@ class MaintenanceService {
     return updatedMaintenance;
   }
   // Function to assign maintainer
+  // Function to assign maintainer
   public async assignMaintainer(
     id: string,
     maintainerId: string,
     scheduledDate?: Date,
     estimatedCompletionTime?: Date
   ): Promise<IMaintenance | null> {
-    const maintenance = await Maintenance.findById(id);
+    const maintenance = await Maintenance.findById(id).populate("property");
 
     if (!maintenance || !maintenance.property) {
       throw new Error(
-        "Maintenance request not found or has not linked property"
+        "Maintenance request not found or has no linked property"
       );
     }
 
     //Convert the id to string as this is how your property database UUID is stored.
-    const propertyId = maintenance.property.toString();
+    const propertyId = (maintenance.property as any)._id.toString();
 
     // Check if originalPropertyStatus is valid, or default to "open"
     let originalPropertyStatus: PropertyStatus = "open";
