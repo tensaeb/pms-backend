@@ -73,6 +73,11 @@ router.get(
   authenticate,
   userController.getUsersByRegisteredBy
 );
+router.get(
+  "/registeredBy/users/:registeredBy",
+  authenticate,
+  userController.getUserRoleUsingRegisteredBy
+);
 
 // Get maintainers by registeredBy ID
 router.get(

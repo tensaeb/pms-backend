@@ -191,6 +191,26 @@ class UserController {
         .json(errorResponse(error.message, "Failed to fetch users"));
     }
   }
+  public async getUserRoleUsingRegisteredBy(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredBy } = req.params;
+      const query = req.query;
+      const users = await userService.getUserRoleUsingRegisteredBy(
+        registeredBy,
+        query
+      );
+      res
+        .status(200)
+        .json(successResponse(users, "Users fetched successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to fetch users"));
+    }
+  }
 
   // Get Super Admin users with pagination
   async getSuperAdminUsers(req: Request, res: Response): Promise<void> {
