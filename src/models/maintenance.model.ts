@@ -1,6 +1,18 @@
 import { model, Schema } from "mongoose";
 import { IMaintenance } from "../interfaces/maintenance.interface";
 
+const equipmentCostSchema = new Schema({
+  quantity: { type: Number, required: true },
+  pricePerUnit: { type: Number, required: true },
+  total: { type: Number, required: true },
+});
+
+const expenseSchema = new Schema({
+  laborCost: { type: Number },
+  equipmentCost: [equipmentCostSchema],
+  description: { type: String },
+});
+
 const maintenanceSchema = new Schema<IMaintenance>(
   {
     tenant: { type: Schema.Types.ObjectId, ref: "User", required: true },
@@ -44,7 +56,7 @@ const maintenanceSchema = new Schema<IMaintenance>(
     priorityLevel: { type: String, enum: ["Low", "Medium", "High"] },
     estimatedCompletionTime: { type: Date },
     notes: { type: String },
-    expense: { type: Number },
+    expense: expenseSchema,
     inspectedBy: { type: Schema.Types.ObjectId, ref: "User" },
     inspectionDate: { type: Date },
     requestedFiles: {
@@ -56,7 +68,8 @@ const maintenanceSchema = new Schema<IMaintenance>(
       validate: [arrayLimit, "Exceeds the limit of 4 files"],
     },
     feedback: { type: String },
-    requestDate: { type: Date, default: Date.now }, // Added request date
+    requestDate: { type: Date, default: Date.now },
+    totalExpenses: { type: Number }, // New field
   },
   { timestamps: true }
 );

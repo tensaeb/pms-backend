@@ -106,7 +106,6 @@ class MaintenanceService {
     return updatedMaintenance;
   }
   // Function to assign maintainer
-  // Function to assign maintainer
   public async assignMaintainer(
     id: string,
     maintainerId: string,
@@ -121,7 +120,6 @@ class MaintenanceService {
       );
     }
 
-    //Convert the id to string as this is how your property database UUID is stored.
     const propertyId = (maintenance.property as any)._id.toString();
 
     // Check if originalPropertyStatus is valid, or default to "open"
@@ -133,10 +131,7 @@ class MaintenanceService {
       originalPropertyStatus = maintenance.originalPropertyStatus;
     }
 
-    await propertyService.updatePropertyStatus(
-      propertyId, // Pass the ID as string.
-      "under maintenance"
-    );
+    await propertyService.updatePropertyStatus(propertyId, "under maintenance");
 
     const updatedMaintenance = await Maintenance.findByIdAndUpdate(
       id,
@@ -155,7 +150,6 @@ class MaintenanceService {
         propertyId,
         originalPropertyStatus
       );
-
       throw new Error("Maintenance request not found");
     }
 
@@ -193,11 +187,37 @@ class MaintenanceService {
   // Function for maintainer to submit expenses
   public async submitMaintenanceExpense(
     id: string,
-    expense: number
+    expenseData: {
+      laborCost?: number;
+      equipmentCost?: { quantity: number; pricePerUnit: number }[];
+      description?: string;
+    }
   ): Promise<IMaintenance | null> {
+    let totalExpenses = 0;
+
+    // Calculate the total for each equipment cost item before updating
+    if (expenseData.equipmentCost) {
+      expenseData.equipmentCost = expenseData.equipmentCost.map((item) => {
+        const total = item.quantity * item.pricePerUnit;
+        totalExpenses += total;
+        return {
+          ...item,
+          total: total,
+        };
+      });
+    }
+
+    //Add labor cost to total expenses
+    if (expenseData.laborCost) {
+      totalExpenses += expenseData.laborCost;
+    }
     const updatedMaintenance = await Maintenance.findByIdAndUpdate(
       id,
-      { expense: expense, status: "Completed" },
+      {
+        expense: expenseData,
+        status: "Completed",
+        totalExpenses: totalExpenses,
+      },
       { new: true }
     );
 
@@ -207,7 +227,6 @@ class MaintenanceService {
     return updatedMaintenance;
   }
 
-  // Function for inspector to inspect and mark as inspected
   // Function for inspector to inspect and mark as inspected
   public async inspectMaintenance(
     id: string,
@@ -235,7 +254,6 @@ class MaintenanceService {
       throw new Error("Property does not have an _id field");
     }
 
-    // Convert the ID to a string as this is how your property database UUID is stored.
     const propertyId = property._id.toString();
 
     // Ensure a default value for originalPropertyStatus.
@@ -272,7 +290,7 @@ class MaintenanceService {
     if (inspectedFiles && inspectedFiles.length > 0) {
       const processedFileUrls = await this.processImages(inspectedFiles);
       updatedMaintenance.inspectedFiles = processedFileUrls;
-      await updatedMaintenance.save(); // Ensure the files are saved in the database
+      await updatedMaintenance.save();
     }
 
     return updatedMaintenance;

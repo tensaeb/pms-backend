@@ -1,6 +1,16 @@
-// maintenance.interface.ts
-
 import { Document, Types } from "mongoose";
+
+interface IEquipmentCost {
+  quantity: number;
+  pricePerUnit: number;
+  total: number;
+}
+
+interface IExpense {
+  laborCost?: number;
+  equipmentCost?: IEquipmentCost[];
+  description?: string;
+}
 
 export interface IMaintenance extends Document {
   tenant: Types.ObjectId;
@@ -28,19 +38,20 @@ export interface IMaintenance extends Document {
   priorityLevel?: "Low" | "Medium" | "High";
   estimatedCompletionTime?: Date;
   notes?: string;
-  expense?: number;
+  expense?: IExpense;
   inspectedBy?: Types.ObjectId;
   inspectionDate?: Date;
   requestedFiles?: string[];
   inspectedFiles?: string[];
   feedback?: string;
-  requestDate?: Date; //Added request Date
+  requestDate?: Date;
   originalPropertyStatus?:
     | "open"
     | "reserved"
     | "closed"
     | "under maintenance"
     | "sold";
+  totalExpenses?: number; // New field
 
   createdAt?: Date;
   updatedAt?: Date;

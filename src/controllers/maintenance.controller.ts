@@ -205,11 +205,11 @@ class MaintenanceController {
     res: Response
   ): Promise<void> {
     try {
-      const { expense } = req.body;
+      const expenseData = req.body;
       const updatedMaintenance =
         await maintenanceService.submitMaintenanceExpense(
           req.params.id,
-          expense
+          expenseData
         );
       res
         .status(200)
