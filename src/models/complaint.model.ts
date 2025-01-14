@@ -3,7 +3,12 @@ import { IComplaint } from "../interfaces/complaint.interface";
 
 const complaintSchema = new Schema<IComplaint>(
   {
-    tenant: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User", // <--- added this
+      required: true,
+    },
+    tenant: { type: Schema.Types.ObjectId, ref: "Tenant" },
     property: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     complaintType: {
       type: String,

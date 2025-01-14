@@ -1,9 +1,11 @@
 import { Document, Schema, Types } from "mongoose";
 import { ITenant } from "./tenant.interface";
 import { IProperty } from "./property.interface";
+import { IUser } from "./user.interface";
 
 export interface IComplaint extends Document {
-  tenant: Types.ObjectId | ITenant;
+  createdBy: Types.ObjectId | IUser;
+  tenant?: Types.ObjectId | ITenant;
   property: Types.ObjectId | IProperty;
   complaintType:
     | "Noise"

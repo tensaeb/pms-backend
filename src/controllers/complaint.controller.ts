@@ -1,3 +1,4 @@
+// complaint.controller.ts
 import { Request, Response } from "express";
 import { errorResponse, successResponse } from "../utils/apiResponse";
 import { complaintService } from "../services/complaint.service";
@@ -11,9 +12,10 @@ class ComplaintController {
       const newComplaint = await complaintService.createComplaint(
         {
           ...req.body,
-          tenant: user,
+          tenant: user?.id,
         },
-        uploadedFiles
+        uploadedFiles,
+        user?.id
       );
 
       res
@@ -177,6 +179,34 @@ class ComplaintController {
         .status(500)
         .json(
           errorResponse(error.message, "Failed to fetch unassigned complaints")
+        );
+    }
+  }
+  public async getComplaintsByRegisteredUser(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const complaints = await complaintService.getComplaintsByRegisteredUser(
+        req.params.userId,
+        req.query
+      );
+      res
+        .status(200)
+        .json(
+          successResponse(
+            complaints,
+            "Complaints for the registered user fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch complaints for the registered user"
+          )
         );
     }
   }

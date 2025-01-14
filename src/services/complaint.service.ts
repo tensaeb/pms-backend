@@ -1,3 +1,4 @@
+// complaint.service.ts
 import { Complaint } from "../models/complaint.model";
 import { IComplaint } from "../interfaces/complaint.interface";
 import { User } from "../models/user.model";
@@ -43,7 +44,8 @@ class ComplaintService {
   }
   public async createComplaint(
     complaintData: Partial<IComplaint>,
-    supportingFiles?: Express.Multer.File[]
+    supportingFiles?: Express.Multer.File[],
+    userId?: string
   ): Promise<IComplaint> {
     const { tenant, property, complaintType, description, priority, notes } =
       complaintData;
@@ -55,6 +57,7 @@ class ComplaintService {
       description,
       priority,
       notes,
+      createdBy: userId,
     });
 
     if (supportingFiles && supportingFiles.length > 0) {
@@ -89,6 +92,12 @@ class ComplaintService {
     const complaints = await Complaint.find(searchQuery)
       .populate("tenant")
       .populate("property")
+      .populate({
+        path: "createdBy",
+        populate: {
+          path: "registeredBy",
+        },
+      })
       .skip((page - 1) * limit)
       .limit(Number(limit));
     const totalComplaints = await Complaint.countDocuments(searchQuery);
@@ -104,6 +113,12 @@ class ComplaintService {
     return await Complaint.findById(id)
       .populate("tenant")
       .populate("property")
+      .populate({
+        path: "createdBy",
+        populate: {
+          path: "registeredBy",
+        },
+      })
       .populate("tenant");
   }
 
@@ -157,12 +172,75 @@ class ComplaintService {
   ): Promise<IComplaint[]> {
     return await Complaint.find({ assignedTo: userId })
       .populate("tenant")
-      .populate("property");
+      .populate("property")
+      .populate({
+        path: "createdBy",
+        populate: {
+          path: "registeredBy",
+        },
+      });
   }
   public async getUnassignedComplaints(): Promise<IComplaint[]> {
     return await Complaint.find({ assignedTo: { $exists: false } })
       .populate("tenant")
-      .populate("property");
+      .populate("property")
+      .populate({
+        path: "createdBy",
+        populate: {
+          path: "registeredBy",
+        },
+      });
+  }
+  public async getComplaintsByRegisteredUser(
+    registeredBy: string,
+    query: any
+  ): Promise<{
+    complaints: Partial<IComplaint>[];
+    totalPages: number;
+    currentPage: number;
+    totalComplaints: number;
+  }> {
+    const { page = 1, limit = 10, search = "", status } = query;
+    // First, find all users registered by this ID
+    const registeredUsers = await User.find({ registeredBy: registeredBy });
+    const registeredUserIds = registeredUsers.map((user) => user._id);
+
+    const searchQuery: any = {
+      createdBy: { $in: registeredUserIds },
+    };
+
+    if (search) {
+      searchQuery.$or = [
+        { "tenant.name": { $regex: search, $options: "i" } },
+        { "property.name": { $regex: search, $options: "i" } },
+        { complaintType: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (status) {
+      searchQuery.status = status;
+    }
+
+    const complaints = await Complaint.find(searchQuery)
+      .populate("tenant")
+      .populate("property")
+      .populate({
+        path: "createdBy",
+        populate: {
+          path: "registeredBy",
+        },
+      })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const totalComplaints = await Complaint.countDocuments(searchQuery);
+
+    return {
+      complaints,
+      totalPages: Math.ceil(totalComplaints / limit),
+      currentPage: Number(page),
+      totalComplaints,
+    };
   }
 }
 
