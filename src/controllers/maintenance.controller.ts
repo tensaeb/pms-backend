@@ -1,3 +1,4 @@
+// maintenance.controller.ts
 import { Request, Response } from "express";
 import { errorResponse, successResponse } from "../utils/apiResponse";
 import { maintenanceService } from "../services/maintenance.service";
@@ -361,6 +362,36 @@ class MaintenanceController {
         .status(500)
         .json(
           errorResponse(error.message, "Failed to delete maintenance request")
+        );
+    }
+  }
+  public async getMaintenanceRequestsByRegisteredUser(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const maintenanceRequests =
+        await maintenanceService.getMaintenanceRequestsByRegisteredUser(
+          req.params.userId,
+          req.query
+        );
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            maintenanceRequests,
+            "Maintenances for the registered user fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch maintenances for the registered user"
+          )
         );
     }
   }

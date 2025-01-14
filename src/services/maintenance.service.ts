@@ -1,3 +1,4 @@
+// maintenance.service.ts
 import { Maintenance } from "../models/maintenance.model";
 import { IMaintenance } from "../interfaces/maintenance.interface";
 import { User } from "../models/user.model";
@@ -366,6 +367,53 @@ class MaintenanceService {
   // Delete a maintenance request by ID
   public async deleteMaintenance(id: string): Promise<IMaintenance | null> {
     return await Maintenance.findByIdAndDelete(id);
+  }
+  public async getMaintenanceRequestsByRegisteredUser(
+    registeredBy: string,
+    query: any
+  ): Promise<{
+    maintenanceRequests: Partial<IMaintenance>[];
+    totalPages: number;
+    currentPage: number;
+    totalMaintenanceRequests: number;
+  }> {
+    const { page = 1, limit = 10, search = "", status } = query;
+    // First, find all users registered by this ID
+    const registeredUsers = await User.find({ registeredBy: registeredBy });
+    const registeredUserIds = registeredUsers.map((user) => user._id);
+
+    const searchQuery: any = {
+      tenant: { $in: registeredUserIds },
+    };
+
+    if (search) {
+      searchQuery.$or = [
+        { "tenant.name": { $regex: search, $options: "i" } },
+        { "property.name": { $regex: search, $options: "i" } },
+        { typeOfRequest: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (status) {
+      searchQuery.status = status;
+    }
+
+    const maintenanceRequests = await Maintenance.find(searchQuery)
+      .populate("tenant")
+      .populate("property")
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const totalMaintenanceRequests = await Maintenance.countDocuments(
+      searchQuery
+    );
+
+    return {
+      maintenanceRequests,
+      totalPages: Math.ceil(totalMaintenanceRequests / limit),
+      currentPage: Number(page),
+      totalMaintenanceRequests,
+    };
   }
 
   // Generate maintenance report with CSV and Word export
