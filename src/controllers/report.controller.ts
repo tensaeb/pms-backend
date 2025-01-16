@@ -138,6 +138,42 @@ class ReportController {
         .json(errorResponse(error.message, "Failed to generate user report"));
     }
   }
+
+  public async getUserReport(req: Request, res: Response): Promise<void> {
+    try {
+      const userReportData = await reportService.fetchUserReportData();
+      res
+        .status(200)
+        .json(
+          successResponse(userReportData, "User report generated successfully")
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to generate user report"));
+    }
+  }
+
+  public async getDashboardReport(req: Request, res: Response): Promise<void> {
+    try {
+      const dashboardReportData =
+        await reportService.fetchDashboardReportData();
+      res
+        .status(200)
+        .json(
+          successResponse(
+            dashboardReportData,
+            "Dashboard report generated successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(error.message, "Failed to generate dashboard report")
+        );
+    }
+  }
 }
 
 export const reportController = new ReportController();

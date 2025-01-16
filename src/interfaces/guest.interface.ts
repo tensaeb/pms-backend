@@ -13,4 +13,5 @@ export interface IGuest extends Document {
   accessCode?: string;
   notes?: string;
   status: "pending" | "active" | "expired" | "cancelled";
+  lastStatusUpdate: Date;
 }

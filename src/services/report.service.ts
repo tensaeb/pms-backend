@@ -1,3 +1,5 @@
+import { IUser } from "../interfaces/user.interface";
+import mongoose from "mongoose";
 import path from "path";
 import fs from "fs";
 import { Parser } from "json2csv";
@@ -6,8 +8,39 @@ import { IProperty } from "../interfaces/property.interface";
 import { ILease } from "../interfaces/lease.interface";
 import { IMaintenance } from "../interfaces/maintenance.interface";
 import { IRentInvoice } from "../interfaces/rentInvoice.interface";
-import { IUser } from "../interfaces/user.interface";
-import mongoose from "mongoose";
+import { IComplaint } from "../interfaces/complaint.interface";
+
+// Define Enums directly here since they were not exported from the interfaces
+enum PropertyStatus {
+  Open = "open",
+  Reserved = "reserved",
+  Closed = "closed",
+  UnderMaintenance = "under maintenance",
+  Sold = "sold",
+}
+
+enum MaintenanceStatus {
+  Pending = "Pending",
+  Approved = "Approved",
+  InProgress = "In Progress",
+  Completed = "Completed",
+  Cancelled = "Cancelled",
+  Inspected = "Inspected",
+  Incomplete = "Incomplete",
+}
+
+enum ComplaintStatus {
+  Pending = "Pending",
+  InProgress = "In Progress",
+  Resolved = "Resolved",
+  Closed = "Closed",
+}
+
+type PropertyStatusCounts = { [key in PropertyStatus | "Unknown"]: number };
+type MaintenanceStatusCounts = {
+  [key in MaintenanceStatus | "Unknown"]: number;
+};
+type ComplaintStatusCounts = { [key in ComplaintStatus | "Unknown"]: number };
 
 class ReportService {
   private static ensureReportsDir() {
@@ -152,7 +185,7 @@ class ReportService {
             new Paragraph({ text: `Description: ${property.description}` }),
             new Paragraph({ text: `Address: ${property.address}` }),
             new Paragraph({ text: `Price: $${property.price}` }),
-            new Paragraph({ text: `Rent Price: $${property.rentPrice}` }),
+            new Paragraph({ text: `Rent Price: ${property.rentPrice}` }),
             new Paragraph({
               text: `Number of Units: ${property.numberOfUnits}`,
             }),
@@ -323,6 +356,131 @@ class ReportService {
         },
       ],
     });
+  }
+
+  public async fetchUserReportData() {
+    const users = await this.fetchData<IUser>("User");
+    return this.aggregateUserReportData(users);
+  }
+
+  private aggregateUserReportData(users: IUser[]) {
+    const roleCounts = users.reduce(
+      (acc, user) => {
+        const role = user.role || "Unknown";
+        acc[role] = acc[role] || {
+          active: 0,
+          inactive: 0,
+          pending: 0,
+          total: 0,
+        };
+        if (user.status === "active") {
+          acc[role].active++;
+        } else if (user.status === "inactive") {
+          acc[role].inactive++;
+        } else if (user.status === "pending") {
+          acc[role].pending++;
+        }
+        acc[role].total++;
+        return acc;
+      },
+      {} as {
+        [role: string]: {
+          active: number;
+          inactive: number;
+          pending: number;
+          total: number;
+        };
+      }
+    );
+
+    const roleList = Object.keys(roleCounts);
+    const report = roleList.map((role) => {
+      return {
+        role,
+        active: roleCounts[role].active,
+        inactive: roleCounts[role].inactive,
+        pending: roleCounts[role].pending,
+        total: roleCounts[role].total,
+      };
+    });
+    return report;
+  }
+
+  public async fetchDashboardReportData() {
+    const properties = await this.fetchData<IProperty>("Property");
+    const maintenances = await this.fetchData<IMaintenance>("Maintenance");
+    const complaints = await this.fetchData<IComplaint>("Complaint");
+
+    return this.aggregateDashboardReportData(
+      properties,
+      maintenances,
+      complaints
+    );
+  }
+
+  private aggregateDashboardReportData(
+    properties: IProperty[],
+    maintenances: IMaintenance[],
+    complaints: IComplaint[]
+  ) {
+    const propertyStatusCounts: PropertyStatusCounts = Object.values(
+      PropertyStatus
+    ).reduce((acc, status) => {
+      acc[status] = 0;
+      return acc;
+    }, {} as PropertyStatusCounts);
+    propertyStatusCounts["Unknown"] = 0;
+
+    properties.forEach((property) => {
+      const status = property.status || "Unknown";
+      if (Object.values(PropertyStatus).includes(status as PropertyStatus)) {
+        propertyStatusCounts[status as PropertyStatus]++;
+      } else {
+        propertyStatusCounts["Unknown"]++;
+      }
+    });
+
+    const maintenanceStatusCounts: MaintenanceStatusCounts = Object.values(
+      MaintenanceStatus
+    ).reduce((acc, status) => {
+      acc[status] = 0;
+      return acc;
+    }, {} as MaintenanceStatusCounts);
+    maintenanceStatusCounts["Unknown"] = 0;
+
+    maintenances.forEach((maintenance) => {
+      const status = maintenance.status || "Unknown";
+      if (
+        Object.values(MaintenanceStatus).includes(status as MaintenanceStatus)
+      ) {
+        maintenanceStatusCounts[status as MaintenanceStatus]++;
+      } else {
+        maintenanceStatusCounts["Unknown"]++;
+      }
+    });
+
+    const complaintStatusCounts: ComplaintStatusCounts = Object.values(
+      ComplaintStatus
+    ).reduce((acc, status) => {
+      acc[status] = 0;
+      return acc;
+    }, {} as ComplaintStatusCounts);
+    complaintStatusCounts["Unknown"] = 0;
+
+    complaints.forEach((complaint) => {
+      const status = complaint.status || "Unknown";
+      if (Object.values(ComplaintStatus).includes(status as ComplaintStatus)) {
+        complaintStatusCounts[status as ComplaintStatus]++;
+      } else {
+        complaintStatusCounts["Unknown"]++;
+      }
+    });
+
+    return {
+      properties: propertyStatusCounts,
+      maintenances: maintenanceStatusCounts,
+      complaints: complaintStatusCounts,
+    };
   }
 }
 

@@ -1,7 +1,7 @@
+// guest.service.js
 import { IGuest } from "../interfaces/guest.interface";
 import { Guest } from "../models/guest.model";
 import { User } from "../models/user.model";
-import { Property } from "../models/property.model";
 import { v4 as uuidv4 } from "uuid";
 import QRCode from "qrcode";
 import * as fs from "fs";
@@ -52,7 +52,6 @@ class GuestService {
       throw err;
     }
   }
-
   private parseDate(date: any): Date | null {
     try {
       if (!date) {
@@ -63,6 +62,29 @@ class GuestService {
       return null;
     }
   }
+
+  private async updateGuestStatus(guest: IGuest): Promise<IGuest> {
+    const now = new Date();
+    let newStatus: "pending" | "active" | "expired" | "cancelled" =
+      guest.status;
+
+    if (guest.status !== "cancelled") {
+      if (now < guest.arrivalDate) {
+        newStatus = "pending";
+      } else if (guest.departureDate && now > guest.departureDate) {
+        newStatus = "expired";
+      } else {
+        newStatus = "active";
+      }
+    }
+    if (newStatus !== guest.status) {
+      guest.status = newStatus;
+      guest.lastStatusUpdate = now;
+      await guest.save();
+    }
+    return guest;
+  }
+
   public async createGuest(
     guestData: Partial<IGuest>,
     loggedInUserId: string | undefined
@@ -74,9 +96,7 @@ class GuestService {
       throw new Error("Property ID is required");
     }
     const arrivalDate = this.parseDate(guestData.arrivalDate);
-
     let departureDate = null;
-
     if (guestData.departureDate) {
       departureDate = this.parseDate(guestData.departureDate);
       if (!departureDate) {
@@ -92,6 +112,10 @@ class GuestService {
       );
     }
 
+    if (departureDate && arrivalDate > departureDate) {
+      throw new Error("Departure date must be after the arrival date");
+    }
+
     const newGuest = new Guest({
       ...guestData,
       user: loggedInUserId,
@@ -105,6 +129,7 @@ class GuestService {
     const accessCode = this.generateAccessCode();
     savedGuest.accessCode = accessCode;
     savedGuest.qrCode = qrCode;
+    await this.updateGuestStatus(savedGuest);
 
     return await savedGuest.save();
   }
@@ -133,26 +158,63 @@ class GuestService {
       Guest.countDocuments(searchQuery),
     ]);
 
+    const updatedGuests = await Promise.all(
+      guests.map((guest) => this.updateGuestStatus(guest))
+    );
+
     return {
-      guests,
+      guests: updatedGuests,
       totalPages: Math.ceil(totalGuests / limit),
       currentPage: Number(page),
       totalGuests,
     };
   }
   public async getGuestById(id: string): Promise<IGuest | null> {
-    return await Guest.findById(id).populate("user").populate("property");
+    const guest = await Guest.findById(id)
+      .populate("user")
+      .populate("property");
+    if (guest) {
+      await this.updateGuestStatus(guest);
+    }
+    return guest;
   }
   public async updateGuest(
     id: string,
     updateData: Partial<IGuest>
   ): Promise<IGuest | null> {
-    return await Guest.findByIdAndUpdate(id, updateData, { new: true });
+    const guest = await Guest.findById(id);
+    if (!guest) {
+      throw new Error("Guest not found");
+    }
+    const arrivalDate = this.parseDate(updateData.arrivalDate);
+    let departureDate = null;
+
+    if (updateData.departureDate) {
+      departureDate = this.parseDate(updateData.departureDate);
+      if (!departureDate) {
+        throw new Error(
+          "Please make sure that  departureDate is in valid date format"
+        );
+      }
+    }
+
+    if (departureDate && arrivalDate && arrivalDate > departureDate) {
+      throw new Error("Departure date must be after the arrival date");
+    }
+    const updatedGuest = await Guest.findByIdAndUpdate(
+      id,
+      { ...updateData, arrivalDate, departureDate },
+      { new: true }
+    );
+    if (updatedGuest) {
+      await this.updateGuestStatus(updatedGuest);
+    }
+
+    return updatedGuest;
   }
   public async deleteGuest(id: string): Promise<IGuest | null> {
     return await Guest.findByIdAndDelete(id);
   }
-
   public async getGuestsByRegisteredBy(
     registeredBy: string,
     query: any
@@ -180,8 +242,12 @@ class GuestService {
         .limit(Number(limit)),
       Guest.countDocuments(searchQuery),
     ]);
+    const updatedGuests = await Promise.all(
+      guests.map((guest) => this.updateGuestStatus(guest))
+    );
+
     return {
-      guests,
+      guests: updatedGuests,
       totalPages: Math.ceil(totalGuests / limit),
       currentPage: Number(page),
       totalGuests,
