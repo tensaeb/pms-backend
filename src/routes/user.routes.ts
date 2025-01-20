@@ -127,4 +127,12 @@ router.put(
   authenticate,
   userController.recursivelyInactiveUsers
 );
+
+// New route to get user status by email
+router.get(
+  "/status/email",
+  // authenticate,
+  userController.getUserStatusByEmail
+);
+
 export default router;

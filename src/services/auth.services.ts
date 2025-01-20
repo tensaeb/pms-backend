@@ -22,7 +22,7 @@ class AuthService {
       throw new Error("Invalid credentials");
     }
 
-    if (user.status !== "active") {
+    if (user.status === "inactive") {
       throw new Error("Account is not active. Please contact administrator.");
     }
 

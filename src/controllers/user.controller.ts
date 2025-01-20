@@ -492,6 +492,38 @@ class UserController {
         .json(errorResponse(error.message, "Failed to fetch inspectors"));
     }
   }
+
+  // New Controller method for status check by email
+  public async getUserStatusByEmail(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { email } = req.body; // Get email from body
+
+      if (!email) {
+        res.status(400).json(errorResponse("Email is required"));
+        return;
+      }
+
+      const statusData = await userService.getUserStatusByEmail(email);
+
+      if (!statusData) {
+        res.status(404).json(errorResponse("User not found"));
+        return;
+      }
+
+      res
+        .status(200)
+        .json(successResponse(statusData, "User status fetched successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(error.message, "Failed to fetch user status by email")
+        );
+    }
+  }
 }
 
 export const userController = new UserController();

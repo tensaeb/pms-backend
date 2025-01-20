@@ -684,6 +684,32 @@ class UserService {
       totalUsers,
     };
   }
+
+  public async getUserStatusByEmail(
+    email: string
+  ): Promise<{ status: string; unhashedPassword?: string } | null> {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return null;
+    }
+
+    const updatedUser = await this.checkAndSetUserActiveStatus(user);
+
+    let response: { status: string; password?: string };
+
+    if (updatedUser.status === "pending") {
+      // This part is only for development and testing purposes.
+      // NEVER use this in production.
+      // It's theoretically impossible to unhash a password, but, in this case we can access the stored password.
+      const password = user.password;
+
+      response = { status: updatedUser.status, password };
+    } else {
+      response = { status: updatedUser.status };
+    }
+
+    return response;
+  }
 }
 
 export const userService = new UserService();
