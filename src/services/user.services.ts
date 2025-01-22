@@ -10,11 +10,6 @@ import { Model, Types } from "mongoose";
 import { randomInt } from "crypto";
 import path from "path";
 
-// Define the return type for methods that need to include unhashedPassword
-export type UserWithUnhashedPassword = {
-  unhashedPassword: string;
-} & ReturnType<Model<IUser>["hydrate"]>;
-
 class UserService {
   // Private helper to check for active end and change user status
   private async checkAndSetUserActiveStatus(user: IUser): Promise<IUser> {
@@ -51,7 +46,7 @@ class UserService {
   public async createSuperUser(
     userData: Partial<IUser>,
     file?: Express.Multer.File
-  ): Promise<UserWithUnhashedPassword> {
+  ): Promise<IUser> {
     const userCount = await User.countDocuments();
 
     if (userCount > 0) {
@@ -77,21 +72,19 @@ class UserService {
       role: "SuperAdmin",
       status: "active",
       registeredBy: null,
+      tempPassword: defaultPassword,
     });
 
     const savedSuperUser = await superUser.save();
-    const userWithPassword = savedSuperUser.toObject();
-    return {
-      ...userWithPassword,
-      unhashedPassword: password,
-    } as UserWithUnhashedPassword;
+    // const userWithPassword = savedSuperUser.toObject();
+    return savedSuperUser;
   }
 
   public async createUser(
     userData: Partial<IUser>,
     loggedInUserId: string | undefined,
     file?: Express.Multer.File
-  ): Promise<UserWithUnhashedPassword> {
+  ): Promise<IUser> {
     const { name, email, phoneNumber, address, role, status } = userData;
 
     if (!loggedInUserId) {
@@ -109,6 +102,7 @@ class UserService {
       address,
       role,
       status,
+      tempPassword: defaultPassword,
       password: hashedPassword,
       registeredBy: loggedInUserId,
     });
@@ -125,11 +119,8 @@ class UserService {
     }
 
     const savedUser = await newUser.save();
-    const userObject = savedUser.toObject();
-    return {
-      ...userObject,
-      unhashedPassword: password,
-    } as UserWithUnhashedPassword;
+
+    return savedUser;
   }
 
   public async resetPassword(
@@ -147,6 +138,7 @@ class UserService {
     // Update the user's password and status
     user.password = hashedPassword;
     user.status = "active";
+    user.tempPassword = "";
 
     return await user.save();
   }
@@ -693,8 +685,6 @@ class UserService {
       throw new Error("User is not found");
     }
 
-    // const updatedUser = await this.checkAndSetUserActiveStatus(user);
-
     const status = user.status;
 
     const response = { status: status };
@@ -702,5 +692,4 @@ class UserService {
     return response;
   }
 }
-
 export const userService = new UserService();

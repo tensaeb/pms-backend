@@ -8,14 +8,13 @@ import { Document, Packer, Paragraph, TextRun } from "docx";
 import { User } from "../models/user.model";
 import { IUser } from "../interfaces/user.interface";
 import { randomInt } from "crypto";
-import { UserWithUnhashedPassword } from "./user.services";
 
 class TenantService {
   public async createTenant(
     tenantData: Partial<ITenant>,
     files?: Express.Multer.File[],
     loggedInUserId?: string
-  ): Promise<{ tenant: ITenant; user: UserWithUnhashedPassword }> {
+  ): Promise<{ tenant: ITenant; user: IUser }> {
     const { tenantName, contactInformation, password } = tenantData;
 
     if (!tenantName || !contactInformation?.email) {
@@ -69,19 +68,16 @@ class TenantService {
       email: contactInformation.email,
       password: hashedPassword,
       role: "Tenant",
+      tempPassword: defaultPassword,
       registeredBy: loggedInUserId,
     });
 
     try {
       const savedUser = await newUser.save();
-      const userWithPassword = savedUser.toObject();
 
       return {
         tenant: savedTenant,
-        user: {
-          ...userWithPassword,
-          unhashedPassword,
-        } as UserWithUnhashedPassword,
+        user: savedUser,
       };
     } catch (error) {
       // Clean up uploaded files if user save fails

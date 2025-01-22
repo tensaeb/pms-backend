@@ -17,6 +17,7 @@ export interface IUser extends Document {
     type: typeof Schema.Types.ObjectId;
     ref: string;
   };
+  tempPassword: string;
   maintenanceSkills: [string];
   permissions: {
     addProperty: boolean;

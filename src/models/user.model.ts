@@ -37,6 +37,7 @@ const userSchema = new Schema<IUser>(
       enum: ["Plumbing", "Electrical", "HVAC", "Appliance Repair", "Other"],
       default: [],
     },
+    tempPassword: { type: String },
     permissions: {
       addProperty: { type: Boolean, default: false },
       editProperty: { type: Boolean, default: false },

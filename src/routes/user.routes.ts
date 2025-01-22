@@ -129,7 +129,7 @@ router.put(
 );
 
 // New route to get user status by email
-router.get(
+router.post(
   "/status/email",
   // authenticate,
   userController.getUserStatusByEmail
