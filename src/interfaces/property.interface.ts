@@ -41,7 +41,13 @@ export interface IProperty extends Document {
   propertyType: PropertyType;
   floorPlan?: string;
   amenities?: string[];
-  status?: "open" | "reserved" | "closed" | "under maintenance" | "sold";
+  status?:
+    | "open"
+    | "reserved"
+    | "closed"
+    | "under maintenance"
+    | "sold"
+    | "deleted";
   photos: IPhoto[];
   createdAt: Date;
   updatedAt: Date;

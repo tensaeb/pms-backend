@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@json2csv/plainjs": "^7.0.6",
+    "@types/xlsx": "^0.0.36",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
@@ -43,6 +44,7 @@
     "sharp": "^0.33.5",
     "socket.io": "^4.8.1",
     "twilio": "^5.3.7",
-    "uuid": "^11.0.3"
+    "uuid": "^11.0.3",
+    "xlsx": "^0.18.5"
   }
 }

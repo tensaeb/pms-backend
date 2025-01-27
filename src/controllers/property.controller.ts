@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { propertyService } from "../services/property.services";
-import path from "path";
 
 import {
   ApiResponse,
@@ -120,6 +119,43 @@ class PropertyController {
       res
         .status(200)
         .json(successResponse(property, "Property deleted successfully"));
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to delete property"));
+    }
+  }
+
+  // Soft delete a property by ID
+  public async softDeleteProperty(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const updatedProperty = await propertyService.softDeleteProperty(id);
+      res
+        .status(200)
+        .json(
+          successResponse(updatedProperty, "Property deleted successfully")
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to delete property"));
+    }
+  }
+
+  // Soft delete multiple properties
+  public async softDeleteMultipleProperties(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { ids } = req.body;
+      const properties = await propertyService.softDeleteMultipleProperties(
+        ids
+      );
+      res
+        .status(200)
+        .json(successResponse(properties, "Properties deleted successfully"));
     } catch (error: any) {
       res
         .status(500)
@@ -257,6 +293,38 @@ class PropertyController {
       res
         .status(500)
         .json(errorResponse(error.message, "Failed to get property by type"));
+    }
+  }
+  // upload properties from excel
+  public async uploadPropertiesFromExcel(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const user = req.user;
+      if (!req.file) {
+        res.status(400).json(errorResponse("No file uploaded"));
+        return;
+      }
+
+      const properties = await propertyService.createPropertiesFromExcel(
+        req.file,
+        user
+      );
+      res
+        .status(201)
+        .json(
+          successResponse(
+            properties,
+            "Properties imported from excel successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(error.message, "Failed to import properties from excel")
+        );
     }
   }
 }

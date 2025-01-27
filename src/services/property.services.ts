@@ -12,6 +12,7 @@ import sharp from "sharp";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { Parser } from "@json2csv/plainjs";
 import { PropertyStatus, isPropertyStatus } from "../utils/typeCheckers";
+import * as XLSX from "xlsx";
 
 class PropertyService {
   private readonly parser = new Parser();
@@ -169,6 +170,7 @@ class PropertyService {
     const { page = 1, limit = 10, search = "", propertyType } = query;
 
     const searchQuery: any = {
+      status: { $ne: "deleted" },
       title: { $regex: search, $options: "i" },
     };
 
@@ -194,7 +196,10 @@ class PropertyService {
   }
 
   public async getPropertyById(id: string): Promise<IProperty> {
-    const property = await Property.findById(id);
+    const property = await Property.findOne({
+      _id: id,
+      status: { $ne: "deleted" },
+    });
     if (!property) throw new Error("Property not found");
     return property;
   }
@@ -248,6 +253,16 @@ class PropertyService {
     }
     await Property.findByIdAndDelete(id);
   }
+
+  public async softDeleteProperty(id: string): Promise<IProperty> {
+    const property = await Property.findById(id);
+    if (!property) throw new Error("Property not found");
+
+    property.status = "deleted";
+
+    const softDeletedProperty = await property.save();
+    return softDeletedProperty;
+  }
   public async getPropertiesByUserId(
     userId: string,
     query: any
@@ -262,6 +277,7 @@ class PropertyService {
 
     const searchQuery: any = {
       userCreated: userId,
+      status: { $ne: "deleted" },
       $or: [{ title: { $regex: search, $options: "i" } }],
     };
 
@@ -298,6 +314,7 @@ class PropertyService {
     // Fetch properties that were created by users registered by the loggedInUserId.
     const searchQuery: any = {
       "userCreated.registeredBy": userAdminId,
+      status: { $ne: "deleted" },
       $or: [{ title: { $regex: search, $options: "i" } }],
     };
 
@@ -389,6 +406,7 @@ class PropertyService {
 
     const searchQuery: any = {
       propertyType: propertyType,
+      status: { $ne: "deleted" },
       title: { $regex: search, $options: "i" },
     };
 
@@ -407,6 +425,62 @@ class PropertyService {
       totalProperties,
       numberOfProperties: properties.length,
     };
+  }
+  // create properties from excel
+  public async createPropertiesFromExcel(
+    file: Express.Multer.File,
+    user: any
+  ): Promise<IProperty[]> {
+    try {
+      const workbook = XLSX.readFile(file.path);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const excelData: any[] = XLSX.utils.sheet_to_json(worksheet);
+      fs.unlinkSync(file.path); // Remove temp file
+
+      const properties = excelData.map((row) => {
+        return {
+          userCreated: user,
+          title: row.Title,
+          description: row.Description,
+          address: row.Address,
+          price: row.Price,
+          rentPrice: row.RentPrice,
+          numberOfUnits: row.NumberOfUnits,
+          propertyType: row.PropertyType,
+          floorPlan: row.FloorPlan,
+          amenities: row.Amenities
+            ? row.Amenities.split(",").map((amenity: string) => amenity.trim())
+            : [],
+          status: row.Status || "open",
+          photos: [], // Important: Photos are empty for excel imports
+        } as Partial<IProperty>; // Type assertion here is changed
+      });
+
+      const createdProperties = await Property.insertMany(properties);
+
+      return createdProperties.map((prop) =>
+        prop?.toObject ? prop.toObject() : prop
+      ) as IProperty[];
+    } catch (error) {
+      console.error("Error importing properties from excel", error);
+      throw new Error("Error reading from the excel file");
+    }
+  }
+  // Multiple soft delete
+  public async softDeleteMultipleProperties(
+    ids: string[]
+  ): Promise<IProperty[]> {
+    const properties = await Property.find({ _id: { $in: ids } });
+    if (!properties || properties.length === 0)
+      throw new Error("No properties to delete");
+
+    properties.forEach((prop) => (prop.status = "deleted"));
+    const softDeletedProperties = await Promise.all(
+      properties.map(async (prop) => await prop.save())
+    );
+
+    return softDeletedProperties;
   }
 }
 export const propertyService = new PropertyService();

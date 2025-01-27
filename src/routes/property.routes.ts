@@ -30,6 +30,13 @@ router.post(
   upload.array("photos"),
   propertyController.createProperty
 );
+//  Route to upload properties through excel
+router.post(
+  "/upload/excel",
+  authenticate,
+  upload.single("file"),
+  propertyController.uploadPropertiesFromExcel
+);
 
 router.get("/images/:propertyId", propertyController.fetchAllImages);
 router.get("/images/:propertyId/:imageId", propertyController.fetchSingleImage);
@@ -73,8 +80,18 @@ router.put(
   propertyController.updateProperty
 );
 
-// Delete a property by ID
+// Soft delete property by ID
+router.put("/:id/delete", authenticate, propertyController.softDeleteProperty);
+
+// Soft delete a property by ID
 router.delete("/:id", authenticate, propertyController.deleteProperty);
+
+//Multiple Soft delete a property
+router.post(
+  "/delete/multiple",
+  authenticate,
+  propertyController.softDeleteMultipleProperties
+);
 
 // Edit a photo by ID
 router.put(
