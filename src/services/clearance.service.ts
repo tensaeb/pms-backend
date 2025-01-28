@@ -1,5 +1,6 @@
 import { Clearance } from "../models/clearance.model";
 import { IClearance } from "../interfaces/clearance.interface";
+import { Property } from "../models/property.model"; // Import the Property model
 
 class ClearanceService {
   public async createClearance(
@@ -64,11 +65,23 @@ class ClearanceService {
       id,
       { status: "Approved", approvedBy: userId },
       { new: true }
-    ).populate("approvedBy");
+    )
+      .populate("approvedBy")
+      .populate("property");
 
     if (!updatedClearance) {
       throw new Error("Clearance request not found");
     }
+
+    // Update Property status to "Open" if clearance is approved
+    if (updatedClearance.status === "Approved" && updatedClearance.property) {
+      await Property.findByIdAndUpdate(
+        updatedClearance.property.id,
+        { status: "open" },
+        { new: true }
+      );
+    }
+
     return updatedClearance;
   }
   public async inspectClearance(
