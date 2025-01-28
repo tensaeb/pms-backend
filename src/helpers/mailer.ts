@@ -1,4 +1,7 @@
 import { createTransport, Transporter } from "nodemailer";
+import { config } from "dotenv";
+
+config();
 
 interface EmailConfig {
   // service: string;
@@ -20,8 +23,8 @@ const emailConfig: EmailConfig = {
   secure: true, // SSL encryption (required for port 465)
   requireTLS: false, // Not needed for SSL
   auth: {
-    user: "tnsaebz@mail.ee", // Full email address
-    pass: "89Y2jQnsRC", // Special password from web interface
+    user: process.env.EMAIL_USER as string,
+    pass: process.env.EMAIL_PASS as string,
   },
   debug: false,
   // Remove `tls.ciphers` unless explicitly required
@@ -39,7 +42,7 @@ const sendEmail = async (
   html?: string
 ) => {
   const mailOptions = {
-    from: "tnsaebz@mail.ee",
+    from: process.env.EMAIL_USER as string,
     to,
     subject,
     text, // Plain text fallback
