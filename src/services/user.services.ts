@@ -166,7 +166,15 @@ class UserService {
     await sendEmail(
       userMain.email,
       "Password Reset Request",
-      `Please use the following code to reset your password: ${resetCode}, this code will expire after one hour`
+      "Plain text version for email clients that don't support HTML", // Text fallback
+      `<!DOCTYPE html>
+       <html>
+         <body>
+           <p>Please use the following code to reset your password:</p>
+           <p style="font-size: 24px; margin-bottom: 10px;">${resetCode}</p>
+           <p>This code will expire after one hour.</p>
+         </body>
+       </html>`
     );
   }
 
