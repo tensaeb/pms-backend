@@ -1,27 +1,48 @@
-import { createTransport } from "nodemailer";
+import { createTransport, Transporter } from "nodemailer";
 
-// Create a transporter using nodemailer
-const transporter = createTransport({
-  service: "Gmail", // You can use another email service like 'Yahoo', 'Outlook', etc.
+interface EmailConfig {
+  // service: string;
+  host: string;
+  port: number;
+  secure: boolean; // true for 465, false for other ports
+  requireTLS: boolean; // true for starttls, false for other ports
   auth: {
-    user: process.env.EMAIL_USER, // Your Gmail address (should be in environment variables)
-    pass: process.env.EMAIL_PASS, // Your Gmail app-specific password (set in environment variables)
+    user: string;
+    pass: string;
+  };
+
+  debug?: boolean; // true for logging
+}
+
+const emailConfig: EmailConfig = {
+  host: "mail.mail.ee", // SMTP server from provider's docs
+  port: 465, // Use SSL port (recommended for reliability)
+  secure: true, // SSL encryption (required for port 465)
+  requireTLS: false, // Not needed for SSL
+  auth: {
+    user: "tnsaebz@mail.ee", // Full email address
+    pass: "89Y2jQnsRC", // Special password from web interface
   },
+  // Remove `tls.ciphers` unless explicitly required
+  debug: true,
+};
+const transporter: Transporter = createTransport({
+  ...emailConfig,
+  debug: true, // This
+  logger: true,
 });
 
-// Send email function
 const sendEmail = async (to: string, subject: string, text: string) => {
   const mailOptions = {
-    from: process.env.EMAIL_USER, // Sender address (your Gmail address)
-    to, // List of receivers
-    subject, // Subject of the email
-    text, // Plain text body
+    from: "tnsaebz@mail.ee",
+    to,
+    subject,
+    text,
   };
 
   try {
-    // Send the email
-    await transporter.sendMail(mailOptions);
-    console.log(`Email sent to ${to}`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Email sent to ${to}: `, info.messageId);
   } catch (error) {
     console.error("Error sending email:", error);
     throw new Error("Failed to send email");

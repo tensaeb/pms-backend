@@ -27,6 +27,18 @@ const upload = multer({ storage });
 // Route to create SuperUser (only when the database is empty)
 router.post("/create-superuser", userController.createSuperUser);
 
+// Route to initiate forgot password
+router.post("/forgot-password", userController.forgotPassword);
+
+// New route to reset password with code
+router.post(
+  "/:email/reset-password-code",
+  userController.resetPasswordWithCode
+);
+
+// New route to get user status by email
+router.post("/status/email", userController.getUserStatusByEmail);
+
 // CREATE new user (Only Admin or SuperAdmin)
 router.post(
   "/admin",
@@ -42,6 +54,7 @@ router.post(
   upload.single("photo"),
   userController.createSuperAdmin
 );
+
 router.post(
   "/",
   authenticate,
@@ -56,17 +69,14 @@ router.get(
   userController.getUsersRegisteredBy
 );
 
-router.post("/:id/photo", uploadMiddleware, userController.uploadPhoto);
-router.delete("/:id/photo", authenticate, userController.deletePhoto);
-router.get("/:id/photo", userController.getPhoto);
-
 //GET users with role
 router.get("/admin", authenticate, userController.getAdminUsers);
 router.get("/super-admin", authenticate, userController.getSuperAdminUsers);
 router.get("/user", authenticate, userController.getUsers);
 router.get("/", authenticate, userController.getAllUsers);
-router.get("/:userId/permissions", userController.updatePermissions);
 router.get("/all-items", authenticate, userController.getUserItems);
+router.get("/:userId/permissions", userController.updatePermissions);
+
 // Get users by registeredBy ID
 router.get(
   "/registeredBy/:registeredBy",
@@ -93,6 +103,10 @@ router.get(
   userController.getInspectorsByRegisteredBy
 );
 
+router.post("/:id/photo", uploadMiddleware, userController.uploadPhoto);
+router.delete("/:id/photo", authenticate, userController.deletePhoto);
+router.get("/:id/photo", userController.getPhoto);
+
 // Update permissions
 router.put(
   "/:userId/permissions",
@@ -107,12 +121,6 @@ router.put(
   upload.single("photo"),
   userController.updateUserById
 );
-// Route to reset password
-router.put(
-  "/:userId/reset-password",
-  authenticate,
-  userController.resetPassword
-);
 
 // Route to delete a user with all connections
 router.delete(
@@ -126,13 +134,6 @@ router.put(
   "/deactivate-recursive/:userId",
   authenticate,
   userController.recursivelyInactiveUsers
-);
-
-// New route to get user status by email
-router.post(
-  "/status/email",
-  // authenticate,
-  userController.getUserStatusByEmail
 );
 
 export default router;

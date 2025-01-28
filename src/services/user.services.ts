@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import fs from "fs";
 import { IUser } from "../interfaces/user.interface";
-import { User } from "../models/user.model";
+import { User, ForgetPassword } from "../models/user.model";
 import { Lease } from "../models/lease.model";
 import { Maintenance } from "../models/maintenance.model";
 import { Property } from "../models/property.model";
@@ -9,6 +9,9 @@ import { Tenant } from "../models/tenant.model";
 import { Model, Types } from "mongoose";
 import { randomInt } from "crypto";
 import path from "path";
+
+import { v4 as uuidv4 } from "uuid";
+import sendEmail from "../helpers/mailer";
 
 class UserService {
   // Private helper to check for active end and change user status
@@ -139,6 +142,71 @@ class UserService {
     user.password = hashedPassword;
     user.status = "active";
     user.tempPassword = "";
+
+    return await user.save();
+  }
+  // Forget Password
+  public async forgotPassword(email: string): Promise<void> {
+    const userMain = await User.findOne({ email });
+    if (!userMain) {
+      throw new Error("User with this email not found");
+    }
+
+    const resetCode = randomInt(100000, 999999).toString(); // Generate 6 digit code
+    const resetCodeExpiration = new Date();
+    resetCodeExpiration.setHours(resetCodeExpiration.getHours() + 1);
+
+    await ForgetPassword.findOneAndUpdate(
+      { email },
+      { resetCode, resetCodeExpiration },
+      { new: true, upsert: true }
+    );
+
+    //send the reset code to the email
+    await sendEmail(
+      userMain.email,
+      "Password Reset Request",
+      `Please use the following code to reset your password: ${resetCode}, this code will expire after one hour`
+    );
+  }
+
+  public async verifyPasswordResetCode(
+    email: string,
+    resetCode: string
+  ): Promise<boolean> {
+    const forgetPasswordEntry = await ForgetPassword.findOne({
+      email,
+      resetCode,
+      resetCodeExpiration: { $gt: new Date() }, // check for expiration
+    });
+
+    return !!forgetPasswordEntry; // true if a valid entry is found
+  }
+
+  public async resetPasswordWithCode(
+    email: string,
+    newPassword: string,
+    resetCode: string
+  ): Promise<IUser> {
+    const isCodeValid = await this.verifyPasswordResetCode(email, resetCode);
+    if (!isCodeValid) {
+      throw new Error("Invalid or expired reset code");
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the user's password and status
+    user.password = hashedPassword;
+    user.status = "active";
+    user.tempPassword = "";
+    await ForgetPassword.deleteOne({ email });
 
     return await user.save();
   }

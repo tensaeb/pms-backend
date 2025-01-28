@@ -143,6 +143,49 @@ class UserController {
       res.status(500).json({ message: error.message });
     }
   }
+  //  Forget Password
+  public async forgotPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { email } = req.body;
+      const result = await userService.forgotPassword(email);
+      res
+        .status(200)
+        .json(successResponse(result, "Password reset code sent to email"));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+  // Reset Password with Code
+  public async resetPasswordWithCode(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { newPassword, resetCode } = req.body;
+      const { email } = req.params;
+      if (!newPassword || newPassword.length < 6) {
+        res
+          .status(400)
+          .json({ message: "Password must be at least 6 characters long" });
+        return;
+      }
+      if (!resetCode) {
+        res.status(400).json({ message: "Reset code is required" });
+        return;
+      }
+      const result = await userService.resetPasswordWithCode(
+        email,
+        newPassword,
+        resetCode
+      );
+
+      res
+        .status(200)
+        .json(successResponse(result, "Password reset successful."));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
 
   // Get all users with pagination
   public async getAllUsers(req: Request, res: Response): Promise<void> {
