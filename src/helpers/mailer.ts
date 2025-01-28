@@ -23,21 +23,27 @@ const emailConfig: EmailConfig = {
     user: "tnsaebz@mail.ee", // Full email address
     pass: "89Y2jQnsRC", // Special password from web interface
   },
+  debug: false,
   // Remove `tls.ciphers` unless explicitly required
-  debug: true,
 };
 const transporter: Transporter = createTransport({
   ...emailConfig,
-  debug: true, // This
-  logger: true,
+  debug: false, // This
+  logger: false,
 });
 
-const sendEmail = async (to: string, subject: string, text: string) => {
+const sendEmail = async (
+  to: string,
+  subject: string,
+  text: string,
+  html?: string
+) => {
   const mailOptions = {
     from: "tnsaebz@mail.ee",
     to,
     subject,
-    text,
+    text, // Plain text fallback
+    html, // HTML version
   };
 
   try {
