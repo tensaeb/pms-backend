@@ -107,6 +107,8 @@ router.post("/:id/photo", uploadMiddleware, userController.uploadPhoto);
 router.delete("/:id/photo", authenticate, userController.deletePhoto);
 router.get("/:id/photo", userController.getPhoto);
 
+router.put("/:userId/reset-password", userController.resetPassword);
+
 // Update permissions
 router.put(
   "/:userId/permissions",
