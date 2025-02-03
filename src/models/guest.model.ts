@@ -21,8 +21,8 @@ const guestSchema = new Schema<IGuest>(
     notes: { type: String },
     status: {
       type: String,
-      enum: ["pending", "active", "expired", "cancelled"],
-      default: "pending",
+      enum: ["active", "expired", "cancelled"],
+      default: "active",
     },
     lastStatusUpdate: { type: Date, default: Date.now }, // Track last status update
   },

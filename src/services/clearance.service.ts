@@ -16,13 +16,13 @@ class ClearanceService {
     try {
       const { tenant, property, moveOutDate, notes } = clearanceData;
       const newClearance = new Clearance({
-        tenant,
+        tenant: tenant, // use the tenant id
         property,
         moveOutDate,
         notes,
       });
 
-      await Tenant.findById(newClearance.tenant.id, {
+      await Tenant.findById(newClearance.tenant, {
         status: "pending",
       });
 
