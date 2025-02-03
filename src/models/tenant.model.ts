@@ -18,6 +18,11 @@ const tenantSchema = new Schema<ITenant>(
       securityDeposit: { type: Number, required: true },
       specialTerms: { type: String },
     },
+    status: {
+      type: String,
+      enum: ["active", "inactive", "pending"],
+      default: "active",
+    },
     propertyInformation: {
       unit: { type: String },
       propertyId: { type: Schema.Types.ObjectId, ref: "Property" },

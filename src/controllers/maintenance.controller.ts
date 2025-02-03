@@ -2,6 +2,7 @@
 import { Request, Response } from "express";
 import { errorResponse, successResponse } from "../utils/apiResponse";
 import { maintenanceService } from "../services/maintenance.service";
+import { IMaintenance } from "../interfaces/maintenance.interface";
 
 class MaintenanceController {
   // Create a new maintenance request
@@ -322,9 +323,17 @@ class MaintenanceController {
   // Update a maintenance request by ID
   public async updateMaintenance(req: Request, res: Response): Promise<void> {
     try {
+      const updateData: Partial<IMaintenance> = {};
+
+      // Iterate over req.body and append to updateData
+      for (const key in req.body) {
+        if (key !== "requestedFiles") {
+          updateData[key as keyof IMaintenance] = req.body[key];
+        }
+      }
       const updatedMaintenance = await maintenanceService.updateMaintenance(
         req.params.id,
-        req.body
+        updateData
       );
       res
         .status(200)

@@ -10,6 +10,7 @@ export interface ITenant extends Document {
     phoneNumber: string;
     emergencyContact?: string;
   };
+  status: "active" | "inactive" | "pending";
   leaseAgreement: {
     startDate: Date;
     endDate: Date;
