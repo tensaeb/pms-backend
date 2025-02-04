@@ -9,6 +9,7 @@ import { ILease } from "../interfaces/lease.interface";
 import { IMaintenance } from "../interfaces/maintenance.interface";
 import { IRentInvoice } from "../interfaces/rentInvoice.interface";
 import { IComplaint } from "../interfaces/complaint.interface";
+import logger from "../utils/logger"; // Import logger
 
 // Define Enums directly here since they were not exported from the interfaces
 enum PropertyStatus {
@@ -45,47 +46,78 @@ type ComplaintStatusCounts = { [key in ComplaintStatus | "Unknown"]: number };
 class ReportService {
   private static ensureReportsDir() {
     const reportsDir = path.join(__dirname, "../../reports");
-    if (!fs.existsSync(reportsDir)) {
-      fs.mkdirSync(reportsDir);
+    try {
+      if (!fs.existsSync(reportsDir)) {
+        fs.mkdirSync(reportsDir);
+        logger.info(`Created reports directory: ${reportsDir}`);
+      }
+      return reportsDir;
+    } catch (error) {
+      logger.error(`Error ensuring reports directory: ${error}`);
+      throw error;
     }
-    return reportsDir;
   }
 
   public async generatePropertyReport(startDate?: string, endDate?: string) {
-    const properties = await this.fetchData<IProperty>(
-      "Property",
-      startDate,
-      endDate
-    );
-    return this.generateReport(properties, "property");
+    try {
+      const properties = await this.fetchData<IProperty>(
+        "Property",
+        startDate,
+        endDate
+      );
+      return this.generateReport(properties, "property");
+    } catch (error) {
+      logger.error(`Error generating property report: ${error}`);
+      throw error;
+    }
   }
 
   public async generateLeaseReport(startDate?: string, endDate?: string) {
-    const leases = await this.fetchData<ILease>("Lease", startDate, endDate);
-    return this.generateReport(leases, "lease");
+    try {
+      const leases = await this.fetchData<ILease>("Lease", startDate, endDate);
+      return this.generateReport(leases, "lease");
+    } catch (error) {
+      logger.error(`Error generating lease report: ${error}`);
+      throw error;
+    }
   }
 
   public async generateMaintenanceReport(startDate?: string, endDate?: string) {
-    const maintenanceRequests = await this.fetchData<IMaintenance>(
-      "Maintenance",
-      startDate,
-      endDate
-    );
-    return this.generateReport(maintenanceRequests, "maintenance");
+    try {
+      const maintenanceRequests = await this.fetchData<IMaintenance>(
+        "Maintenance",
+        startDate,
+        endDate
+      );
+      return this.generateReport(maintenanceRequests, "maintenance");
+    } catch (error) {
+      logger.error(`Error generating maintenance report: ${error}`);
+      throw error;
+    }
   }
 
   public async generateRentInvoiceReport(startDate?: string, endDate?: string) {
-    const rentInvoices = await this.fetchData<IRentInvoice>(
-      "RentInvoice",
-      startDate,
-      endDate
-    );
-    return this.generateReport(rentInvoices, "rentInvoice");
+    try {
+      const rentInvoices = await this.fetchData<IRentInvoice>(
+        "RentInvoice",
+        startDate,
+        endDate
+      );
+      return this.generateReport(rentInvoices, "rentInvoice");
+    } catch (error) {
+      logger.error(`Error generating rent invoice report: ${error}`);
+      throw error;
+    }
   }
 
   public async generateUserReport(startDate?: string, endDate?: string) {
-    const users = await this.fetchData<IUser>("User", startDate, endDate);
-    return this.generateReport(users, "user");
+    try {
+      const users = await this.fetchData<IUser>("User", startDate, endDate);
+      return this.generateReport(users, "user");
+    } catch (error) {
+      logger.error(`Error generating user report: ${error}`);
+      throw error;
+    }
   }
 
   private async fetchData<T>(
@@ -93,50 +125,73 @@ class ReportService {
     startDate?: string,
     endDate?: string
   ): Promise<T[]> {
-    const modelPath = path.resolve(
-      __dirname,
-      `../models/${modelName}.model.js`
-    );
-    let Model;
+    try {
+      const modelPath = path.resolve(
+        __dirname,
+        `../models/${modelName}.model.js`
+      );
+      let Model;
 
-    if (mongoose.connection.models[modelName]) {
-      Model = mongoose.connection.models[modelName];
-    } else {
-      Model = require(modelPath).default;
-    }
+      if (mongoose.connection.models[modelName]) {
+        Model = mongoose.connection.models[modelName];
+      } else {
+        Model = require(modelPath).default;
+      }
 
-    let filter: any = {};
-    if (startDate && endDate) {
-      filter = {
-        createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
-      };
+      let filter: any = {};
+      if (startDate && endDate) {
+        filter = {
+          createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
+        };
+      }
+      const data = await Model.find(filter).lean();
+      logger.info(
+        `Fetched ${data.length} records for ${modelName} (start date: ${startDate}, end date: ${endDate})`
+      );
+      return data;
+    } catch (error) {
+      logger.error(`Error fetching data for ${modelName}: ${error}`);
+      throw error;
     }
-    return Model.find(filter).lean();
   }
 
   private async generateReport<T extends Record<string, any>>(
     data: T[],
     reportType: string
   ) {
-    const reportsDir = ReportService.ensureReportsDir();
-    const timestamp = Date.now();
+    try {
+      const reportsDir = ReportService.ensureReportsDir();
+      const timestamp = Date.now();
 
-    const csvPath = path.join(reportsDir, `${reportType}-${timestamp}.csv`);
-    const wordPath = path.join(reportsDir, `${reportType}-${timestamp}.docx`);
+      const csvPath = path.join(reportsDir, `${reportType}-${timestamp}.csv`);
+      const wordPath = path.join(reportsDir, `${reportType}-${timestamp}.docx`);
 
-    await this.generateCSV(data, csvPath);
-    await this.generateWord(data, wordPath, reportType);
+      await this.generateCSV(data, csvPath);
+      await this.generateWord(data, wordPath, reportType);
 
-    return { csvPath, wordPath };
+      logger.info(
+        `Generated ${reportType} report. CSV path: ${csvPath}, Word path: ${wordPath}`
+      );
+      return { csvPath, wordPath };
+    } catch (error) {
+      logger.error(`Error generating ${reportType} report: ${error}`);
+      throw error;
+    }
   }
 
   private async generateCSV<T extends Record<string, any>>(
     data: T[],
     filePath: string
   ) {
-    const parser = new Parser();
-    const csv = parser.parse(data);
-    fs.writeFileSync(filePath, csv);
+    try {
+      const parser = new Parser();
+      const csv = parser.parse(data);
+      fs.writeFileSync(filePath, csv);
+      logger.info(`Generated CSV file: ${filePath}`);
+    } catch (error) {
+      logger.error(`Error generating CSV file: ${error}`);
+      throw error;
+    }
   }
 
   private async generateWord<T extends Record<string, any>>(
@@ -144,31 +199,38 @@ class ReportService {
     filePath: string,
     reportType: string
   ) {
-    let doc;
-    if (reportType === "property") {
-      doc = this.generateWordReportProperty(data);
-    } else if (reportType === "lease") {
-      doc = this.generateWordReportLease(data);
-    } else if (reportType === "maintenance") {
-      doc = this.generateWordReportMaintenance(data);
-    } else if (reportType === "rentInvoice") {
-      doc = this.generateWordReportRentInvoice(data);
-    } else if (reportType === "user") {
-      doc = this.generateWordReportUser(data);
-    } else {
-      doc = new Document({
-        sections: [
-          {
-            children: [
-              new Paragraph({ text: "Could not generate word report" }),
-            ],
-          },
-        ],
-      });
-    }
+    try {
+      let doc;
+      if (reportType === "property") {
+        doc = this.generateWordReportProperty(data);
+      } else if (reportType === "lease") {
+        doc = this.generateWordReportLease(data);
+      } else if (reportType === "maintenance") {
+        doc = this.generateWordReportMaintenance(data);
+      } else if (reportType === "rentInvoice") {
+        doc = this.generateWordReportRentInvoice(data);
+      } else if (reportType === "user") {
+        doc = this.generateWordReportUser(data);
+      } else {
+        doc = new Document({
+          sections: [
+            {
+              children: [
+                new Paragraph({ text: "Could not generate word report" }),
+              ],
+            },
+          ],
+        });
+        logger.warn(`Could not generate Word report for ${reportType}`);
+      }
 
-    const buffer = await Packer.toBuffer(doc);
-    fs.writeFileSync(filePath, buffer);
+      const buffer = await Packer.toBuffer(doc);
+      fs.writeFileSync(filePath, buffer);
+      logger.info(`Generated Word file: ${filePath}`);
+    } catch (error) {
+      logger.error(`Error generating Word file: ${error}`);
+      throw error;
+    }
   }
 
   private generateWordReportProperty(properties: any[]): Document {
@@ -359,8 +421,13 @@ class ReportService {
   }
 
   public async fetchUserReportData() {
-    const users = await this.fetchData<IUser>("User");
-    return this.aggregateUserReportData(users);
+    try {
+      const users = await this.fetchData<IUser>("User");
+      return this.aggregateUserReportData(users);
+    } catch (error) {
+      logger.error(`Error fetching user report data: ${error}`);
+      throw error;
+    }
   }
 
   private aggregateUserReportData(users: IUser[]) {
@@ -403,19 +470,25 @@ class ReportService {
         total: roleCounts[role].total,
       };
     });
+    logger.info("Aggregated user report data.");
     return report;
   }
 
   public async fetchDashboardReportData() {
-    const properties = await this.fetchData<IProperty>("Property");
-    const maintenances = await this.fetchData<IMaintenance>("Maintenance");
-    const complaints = await this.fetchData<IComplaint>("Complaint");
+    try {
+      const properties = await this.fetchData<IProperty>("Property");
+      const maintenances = await this.fetchData<IMaintenance>("Maintenance");
+      const complaints = await this.fetchData<IComplaint>("Complaint");
 
-    return this.aggregateDashboardReportData(
-      properties,
-      maintenances,
-      complaints
-    );
+      return this.aggregateDashboardReportData(
+        properties,
+        maintenances,
+        complaints
+      );
+    } catch (error) {
+      logger.error(`Error fetching dashboard report data: ${error}`);
+      throw error;
+    }
   }
 
   private aggregateDashboardReportData(
@@ -476,6 +549,7 @@ class ReportService {
       }
     });
 
+    logger.info("Aggregated dashboard report data.");
     return {
       properties: propertyStatusCounts,
       maintenances: maintenanceStatusCounts,

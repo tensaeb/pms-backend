@@ -13,6 +13,7 @@ import { Document, Packer, Paragraph, TextRun } from "docx";
 import { Parser } from "@json2csv/plainjs";
 import { PropertyStatus, isPropertyStatus } from "../utils/typeCheckers";
 import * as XLSX from "xlsx";
+import logger from "../utils/logger";
 
 class PropertyService {
   private readonly parser = new Parser();
@@ -40,55 +41,86 @@ class PropertyService {
     const fileName = `${photoId}${path.extname(file.originalname)}`;
     const photoPath = path.join(this.UPLOAD_DIR, fileName);
 
-    await sharp(file.path).resize(800).toFile(photoPath);
-    fs.unlinkSync(file.path); // Remove the temporary file
-    const photoUrl = `/uploads/properties/${fileName}`;
+    try {
+      await sharp(file.path).resize(800).toFile(photoPath);
+      fs.unlinkSync(file.path); // Remove the temporary file
+      const photoUrl = `/uploads/properties/${fileName}`;
 
-    return {
-      id: photoId,
-      url: photoUrl,
-    };
+      return {
+        id: photoId,
+        url: photoUrl,
+      };
+    } catch (error) {
+      logger.error(`Error processing image: ${error}`);
+      throw error; // Re-throw to be handled upstream
+    }
   }
 
   public async createProperty(
     propertyData: Partial<IProperty>,
     files?: Express.Multer.File[]
   ): Promise<IProperty> {
-    const photos: IPhoto[] = [];
+    try {
+      const photos: IPhoto[] = [];
 
-    if (files?.length) {
-      await Promise.all(
-        files.map(async (file) => {
-          const photo = await this.processImage(file);
-          photos.push(photo);
-        })
-      );
+      if (files?.length) {
+        await Promise.all(
+          files.map(async (file) => {
+            const photo = await this.processImage(file);
+            photos.push(photo);
+          })
+        );
+      }
+      const newProperty = new Property({
+        ...propertyData,
+        photos,
+      } as IProperty); // Added assertion to fix typescript errors due to type mismatches and to match the structure we defined for SQL model
+
+      const savedProperty = await newProperty.save();
+      logger.info(`Property created with ID: ${savedProperty._id}`);
+      return savedProperty;
+    } catch (error) {
+      logger.error(`Error creating property: ${error}`);
+      throw error;
     }
-    const newProperty = new Property({
-      ...propertyData,
-      photos,
-    } as IProperty); // Added assertion to fix typescript errors due to type mismatches and to match the structure we defined for SQL model
-
-    return await newProperty.save();
   }
   async getAllImages(propertyId: string): Promise<IPhoto[]> {
-    const property = await Property.findById(propertyId).select("photos");
-    if (!property) {
-      throw new Error("Property not found");
+    try {
+      const property = await Property.findById(propertyId).select("photos");
+      if (!property) {
+        logger.warn(`Property with ID ${propertyId} not found.`);
+        throw new Error("Property not found");
+      }
+      return property.photos || [];
+    } catch (error) {
+      logger.error(
+        `Error getting all images for property ${propertyId}: ${error}`
+      );
+      throw error;
     }
-    return property.photos || [];
   }
 
   async getImage(propertyId: string, imageId: string): Promise<IPhoto | null> {
-    const property = await Property.findById(propertyId).select("photos");
-    if (!property) {
-      throw new Error("Property not found");
+    try {
+      const property = await Property.findById(propertyId).select("photos");
+      if (!property) {
+        logger.warn(`Property with ID ${propertyId} not found.`);
+        throw new Error("Property not found");
+      }
+      const image = property.photos.find((img: IPhoto) => img.id === imageId);
+      if (!image) {
+        logger.warn(
+          `Image with ID ${imageId} not found for property ${propertyId}.`
+        );
+        throw new Error("Image not found");
+      }
+      return image;
+    } catch (error) {
+      logger.error(
+        `Error getting image ${imageId} for property ${propertyId}: ${error}`
+      );
+      throw error;
     }
-    const image = property.photos.find((img: IPhoto) => img.id === imageId);
-    if (!image) {
-      throw new Error("Image not found");
-    }
-    return image;
   }
 
   public async editPhoto(
@@ -96,69 +128,110 @@ class PropertyService {
     photoId: string,
     file: Express.Multer.File | undefined
   ): Promise<IProperty> {
-    const property = await Property.findById(propertyId);
-    if (!property) throw new Error("Property not found");
-
-    const photoIndex = property.photos.findIndex((p) => p.id === photoId);
-    if (photoIndex === -1) throw new Error("Photo not found");
-
-    const oldPhotoUrl = property.photos[photoIndex].url;
-
-    if (!file) {
-      throw new Error("New image not found, must upload a new image.");
-    }
-    const photo = await this.processImage(file);
-
-    // Delete old file
     try {
-      const oldFilePath = path.join(process.cwd(), oldPhotoUrl);
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath);
+      const property = await Property.findById(propertyId);
+      if (!property) {
+        logger.warn(`Property with ID ${propertyId} not found.`);
+        throw new Error("Property not found");
       }
-    } catch (deleteError: any) {
-      console.error("Error deleting old photo file: ", deleteError.message);
-      // Note: We won't throw here as the file deletion is not crucial to image replacement.
+
+      const photoIndex = property.photos.findIndex((p) => p.id === photoId);
+      if (photoIndex === -1) {
+        logger.warn(
+          `Photo with ID ${photoId} not found for property ${propertyId}.`
+        );
+        throw new Error("Photo not found");
+      }
+
+      const oldPhotoUrl = property.photos[photoIndex].url;
+
+      if (!file) {
+        logger.warn("New image not found, must upload a new image.");
+        throw new Error("New image not found, must upload a new image.");
+      }
+      const photo = await this.processImage(file);
+
+      // Delete old file
+      try {
+        const oldFilePath = path.join(process.cwd(), oldPhotoUrl);
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath);
+          logger.info(`Old photo file deleted: ${oldFilePath}`);
+        }
+      } catch (deleteError: any) {
+        logger.error(`Error deleting old photo file: ${deleteError.message}`);
+        // Note: We won't throw here as the file deletion is not crucial to image replacement.
+      }
+      property.photos[photoIndex].url = photo.url;
+
+      const updatedProperty = await Property.findByIdAndUpdate(
+        propertyId,
+        { photos: property.photos },
+        { new: true, runValidators: true }
+      );
+      if (!updatedProperty) {
+        logger.error(`Property update failed for property ${propertyId}.`);
+        throw new Error("Property update failed");
+      }
+
+      logger.info(`Photo ${photoId} updated for property ${propertyId}.`);
+      return updatedProperty;
+    } catch (error) {
+      logger.error(
+        `Error editing photo ${photoId} for property ${propertyId}: ${error}`
+      );
+      throw error;
     }
-    property.photos[photoIndex].url = photo.url;
-
-    const updatedProperty = await Property.findByIdAndUpdate(
-      propertyId,
-      { photos: property.photos },
-      { new: true, runValidators: true }
-    );
-    if (!updatedProperty) throw new Error("Property update failed");
-
-    return updatedProperty;
   }
 
   public async deletePhoto(
     propertyId: string,
     photoId: string
   ): Promise<IProperty> {
-    const property = await Property.findById(propertyId);
-    if (!property) throw new Error("Property not found");
+    try {
+      const property = await Property.findById(propertyId);
+      if (!property) {
+        logger.warn(`Property with ID ${propertyId} not found.`);
+        throw new Error("Property not found");
+      }
 
-    const photo = property.photos.find((p) => p.id === photoId);
-    if (!photo) throw new Error("Photo not found");
+      const photo = property.photos.find((p) => p.id === photoId);
+      if (!photo) {
+        logger.warn(
+          `Photo with ID ${photoId} not found for property ${propertyId}.`
+        );
+        throw new Error("Photo not found");
+      }
 
-    // Delete physical file
-    const filePath = path.join(process.cwd(), photo.url);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+      // Delete physical file
+      const filePath = path.join(process.cwd(), photo.url);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        logger.info(`Photo file deleted: ${filePath}`);
+      }
+
+      property.photos = property.photos.filter((p) => p.id !== photoId);
+
+      //Ensure admin is passed along
+      const updatedProperty = await Property.findByIdAndUpdate(
+        propertyId,
+        { photos: property.photos },
+        { new: true, runValidators: true }
+      );
+
+      if (!updatedProperty) {
+        logger.error(`Property update failed for property ${propertyId}.`);
+        throw new Error("Property update failed");
+      }
+
+      logger.info(`Photo ${photoId} deleted for property ${propertyId}.`);
+      return updatedProperty;
+    } catch (error) {
+      logger.error(
+        `Error deleting photo ${photoId} for property ${propertyId}: ${error}`
+      );
+      throw error;
     }
-
-    property.photos = property.photos.filter((p) => p.id !== photoId);
-
-    //Ensure admin is passed along
-    const updatedProperty = await Property.findByIdAndUpdate(
-      propertyId,
-      { photos: property.photos },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedProperty) throw new Error("Property update failed");
-
-    return updatedProperty;
   }
 
   public async getAllProperties(query: {
@@ -167,41 +240,59 @@ class PropertyService {
     search?: string;
     propertyType?: string;
   }) {
-    const { page = 1, limit = 10, search = "", propertyType } = query;
+    try {
+      const { page = 1, limit = 10, search = "", propertyType } = query;
 
-    const searchQuery: any = {
-      status: { $ne: "deleted" },
-      title: { $regex: search, $options: "i" },
-    };
+      const searchQuery: any = {
+        status: { $ne: "deleted" },
+        title: { $regex: search, $options: "i" },
+      };
 
-    if (propertyType) {
-      searchQuery.propertyType = propertyType;
+      if (propertyType) {
+        searchQuery.propertyType = propertyType;
+      }
+
+      const [properties, totalProperties] = await Promise.all([
+        Property.find(searchQuery)
+          .skip((page - 1) * limit)
+          .limit(Number(limit))
+          .lean(),
+        Property.countDocuments(searchQuery),
+      ]);
+
+      logger.info(
+        `Retrieved ${properties.length} properties (page ${page}, limit ${limit}, search "${search}", propertyType "${propertyType}"). Total properties: ${totalProperties}`
+      );
+
+      return {
+        properties,
+        totalPages: Math.ceil(totalProperties / limit),
+        currentPage: Number(page),
+        totalProperties,
+        numberOfProperties: properties.length,
+      };
+    } catch (error) {
+      logger.error(`Error getting all properties: ${error}`);
+      throw error;
     }
-
-    const [properties, totalProperties] = await Promise.all([
-      Property.find(searchQuery)
-        .skip((page - 1) * limit)
-        .limit(Number(limit))
-        .lean(),
-      Property.countDocuments(searchQuery),
-    ]);
-
-    return {
-      properties,
-      totalPages: Math.ceil(totalProperties / limit),
-      currentPage: Number(page),
-      totalProperties,
-      numberOfProperties: properties.length,
-    };
   }
 
   public async getPropertyById(id: string): Promise<IProperty> {
-    const property = await Property.findOne({
-      _id: id,
-      status: { $ne: "deleted" },
-    });
-    if (!property) throw new Error("Property not found");
-    return property;
+    try {
+      const property = await Property.findOne({
+        _id: id,
+        status: { $ne: "deleted" },
+      });
+      if (!property) {
+        logger.warn(`Property with ID ${id} not found.`);
+        throw new Error("Property not found");
+      }
+      logger.info(`Retrieved property with ID: ${id}`);
+      return property;
+    } catch (error) {
+      logger.error(`Error getting property by ID ${id}: ${error}`);
+      throw error;
+    }
   }
 
   public async updateProperty(
@@ -209,59 +300,90 @@ class PropertyService {
     updateData: Partial<IProperty>,
     files?: Express.Multer.File[]
   ): Promise<IProperty> {
-    const property = await Property.findById(id);
-    if (!property) throw new Error("Property not found");
+    try {
+      const property = await Property.findById(id);
+      if (!property) {
+        logger.warn(`Property with ID ${id} not found.`);
+        throw new Error("Property not found");
+      }
 
-    if (files?.length) {
-      const newPhotos = await Promise.all(
-        files.map((file) => this.processImage(file))
-      );
-      updateData.photos = [...property.photos, ...newPhotos];
+      if (files?.length) {
+        const newPhotos = await Promise.all(
+          files.map((file) => this.processImage(file))
+        );
+        updateData.photos = [...property.photos, ...newPhotos];
+      }
+
+      const updatedProperty = await Property.findByIdAndUpdate(id, updateData, {
+        new: true,
+      });
+      if (!updatedProperty) {
+        logger.error(`Update failed for property ${id}.`);
+        throw new Error("Update failed");
+      }
+
+      logger.info(`Property with ID ${id} updated successfully.`);
+      return updatedProperty;
+    } catch (error) {
+      logger.error(`Error updating property ${id}: ${error}`);
+      throw error;
     }
-
-    const updatedProperty = await Property.findByIdAndUpdate(id, updateData, {
-      new: true,
-    });
-    if (!updatedProperty) throw new Error("Update failed");
-
-    return updatedProperty;
   }
   public async deleteProperty(id: string): Promise<void> {
-    const property = await Property.findById(id);
-    if (!property) throw new Error("Property not found");
+    try {
+      const property = await Property.findById(id);
+      if (!property) {
+        logger.warn(`Property with ID ${id} not found.`);
+        throw new Error("Property not found");
+      }
 
-    // Delete associated photos
-    if (property.photos && property.photos.length > 0) {
-      property.photos.forEach((photo) => {
-        if (photo && photo.url) {
-          // ADDED CHECK HERE
-          const filePath = path.join(process.cwd(), photo.url);
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+      // Delete associated photos
+      if (property.photos && property.photos.length > 0) {
+        property.photos.forEach((photo) => {
+          if (photo && photo.url) {
+            // ADDED CHECK HERE
+            const filePath = path.join(process.cwd(), photo.url);
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+              logger.info(`Photo file deleted: ${filePath}`);
+            } else {
+              logger.warn(
+                `File not found at path: ${filePath} while deleting property: ${id}`
+              );
+            }
           } else {
-            console.warn(
-              `File not found at path: ${filePath} while deleting property: ${id}`
+            logger.warn(
+              `Photo object or url is undefined while deleting property: ${id}`,
+              photo
             );
           }
-        } else {
-          console.warn(
-            `Photo object or url is undefined while deleting property: ${id}`,
-            photo
-          );
-        }
-      });
+        });
+      }
+      await Property.findByIdAndDelete(id);
+      logger.info(`Property with ID ${id} deleted successfully.`);
+    } catch (error) {
+      logger.error(`Error deleting property ${id}: ${error}`);
+      throw error;
     }
-    await Property.findByIdAndDelete(id);
   }
 
   public async softDeleteProperty(id: string): Promise<IProperty> {
-    const property = await Property.findById(id);
-    if (!property) throw new Error("Property not found");
+    try {
+      const property = await Property.findById(id);
+      if (!property) {
+        logger.warn(`Property with ID ${id} not found.`);
+        throw new Error("Property not found");
+      }
 
-    property.status = "deleted";
+      property.status = "deleted";
 
-    const softDeletedProperty = await property.save();
-    return softDeletedProperty;
+      const softDeletedProperty = await property.save();
+      logger.info(`Property with ID ${id} soft deleted.`);
+      return softDeletedProperty;
+    } catch (error) {
+      logger.error(`Error soft deleting property ${id}: ${error}`);
+      throw error;
+    }
   }
   public async getPropertiesByUserId(
     userId: string,
@@ -273,30 +395,39 @@ class PropertyService {
     totalProperties: number;
     numberOfProperties: number;
   }> {
-    const { page = 1, limit = 10, search = "" } = query;
+    try {
+      const { page = 1, limit = 10, search = "" } = query;
 
-    const searchQuery: any = {
-      userCreated: userId,
-      status: { $ne: "deleted" },
-      $or: [{ title: { $regex: search, $options: "i" } }],
-    };
+      const searchQuery: any = {
+        userCreated: userId,
+        status: { $ne: "deleted" },
+        $or: [{ title: { $regex: search, $options: "i" } }],
+      };
 
-    const [properties, totalProperties] = await Promise.all([
-      Property.find(searchQuery)
-        .select("-__v")
-        .skip((page - 1) * limit)
-        .limit(Number(limit))
-        .lean(),
-      Property.countDocuments(searchQuery),
-    ]);
+      const [properties, totalProperties] = await Promise.all([
+        Property.find(searchQuery)
+          .select("-__v")
+          .skip((page - 1) * limit)
+          .limit(Number(limit))
+          .lean(),
+        Property.countDocuments(searchQuery),
+      ]);
 
-    return {
-      properties,
-      totalPages: Math.ceil(totalProperties / limit),
-      currentPage: Number(page),
-      totalProperties,
-      numberOfProperties: properties.length,
-    };
+      logger.info(
+        `Retrieved ${properties.length} properties for user ${userId} (page ${page}, limit ${limit}, search "${search}"). Total properties: ${totalProperties}`
+      );
+
+      return {
+        properties,
+        totalPages: Math.ceil(totalProperties / limit),
+        currentPage: Number(page),
+        totalProperties,
+        numberOfProperties: properties.length,
+      };
+    } catch (error) {
+      logger.error(`Error getting properties by user ID ${userId}: ${error}`);
+      throw error;
+    }
   }
 
   public async getPropertiesByUserAdminID(
@@ -309,34 +440,46 @@ class PropertyService {
     totalProperties: number;
     numberOfProperties: number;
   }> {
-    const { page = 1, limit = 10, search = "" } = query;
+    try {
+      const { page = 1, limit = 10, search = "" } = query;
 
-    // Fetch properties that were created by users registered by the loggedInUserId.
-    const searchQuery: any = {
-      "userCreated.registeredBy": userAdminId,
-      status: { $ne: "deleted" },
-      $or: [{ title: { $regex: search, $options: "i" } }],
-    };
+      // Fetch properties that were created by users registered by the loggedInUserId.
+      const searchQuery: any = {
+        "userCreated.registeredBy": userAdminId,
+        status: { $ne: "deleted" },
+        $or: [{ title: { $regex: search, $options: "i" } }],
+      };
 
-    const [properties, totalProperties] = await Promise.all([
-      Property.find(searchQuery)
-        .populate({
-          path: "userCreated",
-          select: "registeredBy",
-        })
-        .select("-__v")
-        .skip((page - 1) * limit)
-        .limit(Number(limit))
-        .lean(),
-      Property.countDocuments(searchQuery),
-    ]);
-    return {
-      properties,
-      totalPages: Math.ceil(totalProperties / limit),
-      currentPage: Number(page),
-      totalProperties,
-      numberOfProperties: properties.length,
-    };
+      const [properties, totalProperties] = await Promise.all([
+        Property.find(searchQuery)
+          .populate({
+            path: "userCreated",
+            select: "registeredBy",
+          })
+          .select("-__v")
+          .skip((page - 1) * limit)
+          .limit(Number(limit))
+          .lean(),
+        Property.countDocuments(searchQuery),
+      ]);
+
+      logger.info(
+        `Retrieved ${properties.length} properties for admin user ${userAdminId} (page ${page}, limit ${limit}, search "${search}"). Total properties: ${totalProperties}`
+      );
+
+      return {
+        properties,
+        totalPages: Math.ceil(totalProperties / limit),
+        currentPage: Number(page),
+        totalProperties,
+        numberOfProperties: properties.length,
+      };
+    } catch (error) {
+      logger.error(
+        `Error getting properties by admin user ID ${userAdminId}: ${error}`
+      );
+      throw error;
+    }
   }
 
   public async updatePropertyStatus(propertyId: string, status: string) {
@@ -344,17 +487,25 @@ class PropertyService {
       const property = await Property.findById(propertyId);
 
       if (!property) {
+        logger.warn(`Property with id ${propertyId} not found`);
         throw new Error(`Property with id ${propertyId} not found`);
       }
 
       if (!isPropertyStatus(status)) {
+        logger.warn(`${status} is not a valid property status`);
         throw new Error(`${status} is not a valid property status`);
       }
       property.status = status;
       await property.save();
+
+      logger.info(
+        `Property status updated to ${status} for property ID ${propertyId}.`
+      );
       return property;
     } catch (error) {
-      console.error(`Error updating property status to ${status}`, error);
+      logger.error(
+        `Error updating property status to ${status} for property ${propertyId}: ${error}`
+      );
       throw error;
     }
   }
@@ -368,28 +519,37 @@ class PropertyService {
     totalProperties: number;
     numberOfProperties: number;
   }> {
-    const { page = 1, limit = 10, search = "" } = query;
+    try {
+      const { page = 1, limit = 10, search = "" } = query;
 
-    const searchQuery: any = {
-      status: status,
-      title: { $regex: search, $options: "i" },
-    };
+      const searchQuery: any = {
+        status: status,
+        title: { $regex: search, $options: "i" },
+      };
 
-    const [properties, totalProperties] = await Promise.all([
-      Property.find(searchQuery)
-        .skip((page - 1) * limit)
-        .limit(Number(limit))
-        .lean(),
-      Property.countDocuments(searchQuery),
-    ]);
+      const [properties, totalProperties] = await Promise.all([
+        Property.find(searchQuery)
+          .skip((page - 1) * limit)
+          .limit(Number(limit))
+          .lean(),
+        Property.countDocuments(searchQuery),
+      ]);
 
-    return {
-      properties,
-      totalPages: Math.ceil(totalProperties / limit),
-      currentPage: Number(page),
-      totalProperties,
-      numberOfProperties: properties.length,
-    };
+      logger.info(
+        `Retrieved ${properties.length} properties with status "${status}" (page ${page}, limit ${limit}, search "${search}"). Total properties: ${totalProperties}`
+      );
+
+      return {
+        properties,
+        totalPages: Math.ceil(totalProperties / limit),
+        currentPage: Number(page),
+        totalProperties,
+        numberOfProperties: properties.length,
+      };
+    } catch (error) {
+      logger.error(`Error getting properties by status ${status}: ${error}`);
+      throw error;
+    }
   }
 
   public async getPropertiesByType(
@@ -402,29 +562,39 @@ class PropertyService {
     totalProperties: number;
     numberOfProperties: number;
   }> {
-    const { page = 1, limit = 10, search = "" } = query;
+    try {
+      const { page = 1, limit = 10, search = "" } = query;
 
-    const searchQuery: any = {
-      propertyType: propertyType,
-      status: { $ne: "deleted" },
-      title: { $regex: search, $options: "i" },
-    };
+      const searchQuery: any = {
+        propertyType: propertyType,
+        status: { $ne: "deleted" },
+        title: { $regex: search, $options: "i" },
+      };
 
-    const [properties, totalProperties] = await Promise.all([
-      Property.find(searchQuery)
-        .skip((page - 1) * limit)
-        .limit(Number(limit))
-        .lean(),
-      Property.countDocuments(searchQuery),
-    ]);
+      const [properties, totalProperties] = await Promise.all([
+        Property.find(searchQuery)
+          .skip((page - 1) * limit)
+          .limit(Number(limit))
+          .lean(),
+        Property.countDocuments(searchQuery),
+      ]);
+      logger.info(
+        `Retrieved ${properties.length} properties with propertyType "${propertyType}" (page ${page}, limit ${limit}, search "${search}"). Total properties: ${totalProperties}`
+      );
 
-    return {
-      properties,
-      totalPages: Math.ceil(totalProperties / limit),
-      currentPage: Number(page),
-      totalProperties,
-      numberOfProperties: properties.length,
-    };
+      return {
+        properties,
+        totalPages: Math.ceil(totalProperties / limit),
+        currentPage: Number(page),
+        totalProperties,
+        numberOfProperties: properties.length,
+      };
+    } catch (error) {
+      logger.error(
+        `Error getting properties by type ${propertyType}: ${error}`
+      );
+      throw error;
+    }
   }
   // create properties from excel
   public async createPropertiesFromExcel(
@@ -459,11 +629,15 @@ class PropertyService {
 
       const createdProperties = await Property.insertMany(properties);
 
+      logger.info(
+        `Created ${createdProperties.length} properties from Excel import.`
+      );
+
       return createdProperties.map((prop) =>
         prop?.toObject ? prop.toObject() : prop
       ) as IProperty[];
     } catch (error) {
-      console.error("Error importing properties from excel", error);
+      logger.error(`Error importing properties from excel: ${error}`);
       throw new Error("Error reading from the excel file");
     }
   }
@@ -471,16 +645,26 @@ class PropertyService {
   public async softDeleteMultipleProperties(
     ids: string[]
   ): Promise<IProperty[]> {
-    const properties = await Property.find({ _id: { $in: ids } });
-    if (!properties || properties.length === 0)
-      throw new Error("No properties to delete");
+    try {
+      const properties = await Property.find({ _id: { $in: ids } });
+      if (!properties || properties.length === 0) {
+        logger.warn(`No properties to delete with IDs: ${ids.join(", ")}`);
+        throw new Error("No properties to delete");
+      }
 
-    properties.forEach((prop) => (prop.status = "deleted"));
-    const softDeletedProperties = await Promise.all(
-      properties.map(async (prop) => await prop.save())
-    );
+      properties.forEach((prop) => (prop.status = "deleted"));
+      const softDeletedProperties = await Promise.all(
+        properties.map(async (prop) => await prop.save())
+      );
+      logger.info(
+        `Soft deleted multiple properties with IDs: ${ids.join(", ")}`
+      );
 
-    return softDeletedProperties;
+      return softDeletedProperties;
+    } catch (error) {
+      logger.error(`Error soft deleting multiple properties: ${error}`);
+      throw error;
+    }
   }
 }
 export const propertyService = new PropertyService();
