@@ -14,12 +14,13 @@ class ClearanceService {
       )}`
     );
     try {
-      const { tenant, property, moveOutDate, notes } = clearanceData;
+      const { tenant, property, moveOutDate, notes, reason } = clearanceData;
       const newClearance = new Clearance({
         tenant: tenant, // use the tenant id
         property,
         moveOutDate,
         notes,
+        reason,
       });
 
       await Tenant.findById(newClearance.tenant, {

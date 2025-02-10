@@ -5,6 +5,7 @@ export interface IClearance extends Document {
   property: Types.ObjectId;
   moveOutDate: Date;
   status: string;
+  reason: string;
   inspectionStatus: string;
   notes?: string;
   approvedBy?: Types.ObjectId;

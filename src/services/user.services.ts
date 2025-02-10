@@ -375,7 +375,7 @@ class UserService {
       const users = await User.find(searchQuery)
         .skip((page - 1) * limit)
         .limit(Number(limit))
-        .select("name email phoneNumber role status");
+        .select("name email phoneNumber role status activeStart activeEnd");
       const updatedUsers = await Promise.all(
         users.map(async (user) => this.checkAndSetUserActiveStatus(user))
       );

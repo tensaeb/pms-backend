@@ -30,7 +30,14 @@ const userSchema = new Schema<IUser>(
     resetCode: { type: String },
     resetCodeExpiration: { type: Date },
     activeStart: { type: Date, default: Date.now }, // Set default to now, to auto make created time.
-    activeEnd: { type: Date },
+    activeEnd: {
+      type: Date,
+      default: () => {
+        const twoMonthsFromNow = new Date();
+        twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
+        return twoMonthsFromNow;
+      },
+    },
     registeredBy: { type: Schema.Types.ObjectId, ref: "User" }, // Field to store who registered the user
     maintenanceSkills: {
       type: [String],

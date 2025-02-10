@@ -11,6 +11,7 @@ const clearanceSchema = new Schema<IClearance>(
       enum: ["Pending", "Approved", "Rejected"],
       default: "Pending",
     },
+    reason: { type: String, required: false },
     inspectionStatus: {
       type: String,
       enum: ["Pending", "Passed", "Failed"],
