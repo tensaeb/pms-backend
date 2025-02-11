@@ -12,10 +12,10 @@ const tenantSchema = new Schema<ITenant>(
       emergencyContact: { type: String },
     },
     leaseAgreement: {
-      startDate: { type: Date, required: true },
-      endDate: { type: Date, required: true },
-      rentAmount: { type: Number, required: true },
-      securityDeposit: { type: Number, required: true },
+      startDate: { type: Date },
+      endDate: { type: Date },
+      rentAmount: { type: Number },
+      securityDeposit: { type: Number },
       specialTerms: { type: String },
     },
     status: {
@@ -35,8 +35,8 @@ const tenantSchema = new Schema<ITenant>(
       ],
     },
     password: { type: String, required: true },
-    paymentMethod: { type: String, required: true },
-    moveInDate: { type: Date, required: true },
+    paymentMethod: { type: String },
+    moveInDate: { type: Date },
     emergencyContacts: [String],
   },
   { timestamps: true }
