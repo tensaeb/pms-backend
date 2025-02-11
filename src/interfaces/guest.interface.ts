@@ -12,6 +12,6 @@ export interface IGuest extends Document {
   qrCode?: string;
   accessCode?: string;
   notes?: string;
-  status: "pending" | "active" | "expired" | "cancelled";
+  status: "active" | "expired" | "cancelled";
   lastStatusUpdate: Date;
 }
