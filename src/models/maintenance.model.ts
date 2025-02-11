@@ -2,14 +2,14 @@ import { model, Schema } from "mongoose";
 import { IMaintenance } from "../interfaces/maintenance.interface";
 
 const equipmentCostSchema = new Schema({
-  quantity: { type: Number, required: true },
-  pricePerUnit: { type: Number, required: true },
-  total: { type: Number, required: true },
-  description: { type: String },
+  quantity: { type: Number, default: 0 },
+  pricePerUnit: { type: Number, default: 0 },
+  total: { type: Number, default: 0 },
+  description: { type: String, default: "" },
 });
 
 const expenseSchema = new Schema({
-  laborCost: { type: Number },
+  laborCost: { type: Number, default: 0 },
   equipmentCost: [equipmentCostSchema],
 });
 
