@@ -75,13 +75,10 @@ class GuestService {
   private async updateGuestStatus(guest: IGuest): Promise<IGuest> {
     try {
       const now = new Date();
-      let newStatus: "pending" | "active" | "expired" | "cancelled" =
-        guest.status;
+      let newStatus: "active" | "expired" | "cancelled" = guest.status;
 
       if (guest.status !== "cancelled") {
-        if (now < guest.arrivalDate) {
-          newStatus = "pending";
-        } else if (guest.departureDate && now > guest.departureDate) {
+        if (guest.departureDate && now > guest.departureDate) {
           newStatus = "expired";
         } else {
           newStatus = "active";
