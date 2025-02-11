@@ -1,10 +1,218 @@
 import { Clearance } from "../models/clearance.model";
 import { IClearance } from "../interfaces/clearance.interface";
-import { Property } from "../models/property.model"; // Import the Property model
+import { Property } from "../models/property.model";
 import logger from "../utils/logger";
 import { Tenant } from "../models/tenant.model";
+import PDFDocument from "pdfkit";
+import path from "path";
+import fs from "fs";
+import { v4 as uuidv4 } from "uuid";
+
+interface ImageOptions {
+  fit: [number, number];
+  align: "center" | "right" | "left";
+  valign: "top" | "center" | "bottom";
+  x?: number;
+  y?: number;
+}
 
 class ClearanceService {
+  private async generateClearancePDF(clearanceId: string): Promise<string> {
+    logger.info(
+      `generateClearancePDF: Generating PDF for clearanceId ${clearanceId}`
+    );
+
+    try {
+      const clearance = await Clearance.findById(clearanceId)
+        .populate("tenant")
+        .populate("property");
+
+      if (!clearance) {
+        logger.error(
+          `generateClearancePDF: Clearance with ID ${clearanceId} not found`
+        );
+        throw new Error("Clearance document not found");
+      }
+
+      if (!clearance.tenant || !clearance.property) {
+        logger.error(
+          `generateClearancePDF: Clearance with ID ${clearanceId} is missing tenant or property details`
+        );
+        throw new Error("Clearance is missing tenant or property details");
+      }
+
+      const doc = new PDFDocument({ autoFirstPage: false });
+      const uploadDir = path.join(__dirname, `../../uploads/clearance`);
+      const uniqueFilename = `clearance_${uuidv4()}.pdf`;
+      const filePath = path.join(uploadDir, uniqueFilename);
+
+      // Ensure directory exists
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+        logger.info(`generateClearancePDF: Directory created: ${uploadDir}`);
+      }
+
+      const writeStream = fs.createWriteStream(filePath);
+      doc.pipe(writeStream);
+
+      doc
+        .addPage()
+        .fontSize(20)
+        .text("Property and Tenant Information", { align: "center" })
+        .moveDown();
+
+      // Define left and right column start positions
+      const leftColumnX = 50;
+      const rightColumnX = 300;
+
+      //Function to make labels:
+      function addLabelValue(
+        doc: PDFKit.PDFDocument,
+        label: string,
+        value: string,
+        y: number
+      ): number {
+        const options = {
+          width: 200, // Fixed column width
+          height: 100, // Max height before creating new page
+          ellipsis: true, // Add ellipsis if text overflows
+        };
+
+        // Calculate label height
+        const labelHeight = doc.heightOfString(`${label}:`, options);
+
+        // Calculate value height (use empty string if undefined)
+        const valueHeight = doc.heightOfString(value || "", options);
+
+        // Use the taller column height
+        const rowHeight = Math.max(labelHeight, valueHeight) + 5; // Add 5px padding
+
+        // Draw label and value
+        doc
+          .fontSize(12)
+          .text(`${label}:`, leftColumnX, y, options)
+          .text(value || "N/A", rightColumnX, y, options);
+
+        return rowHeight;
+      }
+
+      let currentY = 100;
+      const fields = [
+        { label: "Clearance ID", value: (clearance._id as any).toString() },
+        { label: "Issued To", value: (clearance.tenant as any).tenantName },
+        {
+          label: "Property Address",
+          value: (clearance.property as any).address,
+        },
+        {
+          label: "Move Out Date",
+          value: new Date(clearance.moveOutDate).toLocaleDateString(),
+        },
+        { label: "Status", value: clearance.status },
+        { label: "Details", value: clearance.notes || "No details provided." },
+        { label: "Property Title", value: (clearance.property as any).title },
+        {
+          label: "Tenant Email",
+          value: (clearance.tenant as any).contactInformation?.email,
+        },
+        {
+          label: "Tenant Phone",
+          value: (clearance.tenant as any).contactInformation?.phoneNumber,
+        },
+        {
+          label: "Property Rent",
+          value: (clearance.property as any).rentPrice,
+        },
+      ];
+      fields.forEach((field) => {
+        const rowHeight = addLabelValue(
+          doc,
+          field.label,
+          field.value,
+          currentY
+        );
+        if (currentY + rowHeight > doc.page.height - 150) {
+          // Leave space for signatures
+          doc.addPage();
+          currentY = 50; // Reset Y position for new page
+        } else {
+          currentY += rowHeight;
+        }
+
+        // Check if we need a new page
+      });
+
+      doc.moveDown();
+      const assetsPath = path.join(__dirname, `../../assets`);
+      const signaturePath = path.join(assetsPath, "signature.png");
+      const stampPath = path.join(assetsPath, "stamp.png");
+
+      const docBottom = doc.page.height;
+      // Add signature
+
+      const signatureOptions: any = {
+        fit: [100, 50],
+        align: "right",
+        x: doc.page.width - 150, // Adjust horizontal position
+        y: docBottom - 150, // Adjust vertical position
+      };
+
+      if (fs.existsSync(signaturePath)) {
+        doc.image(signaturePath, signatureOptions);
+        doc
+          .fontSize(8)
+          .text("Authorized Signature", doc.page.width - 150, docBottom - 100, {
+            // Adjust text position
+            align: "right",
+          } as any);
+        doc.rotate(-20, { origin: [100, docBottom - 120] });
+      } else {
+        logger.warn(
+          `generateClearancePDF: Signature image not found at path ${signaturePath}`
+        );
+      }
+
+      // Add stamp
+      if (fs.existsSync(stampPath)) {
+        const stampOptions: any = {
+          fit: [150, 150],
+          x: 50,
+          y: docBottom - 150,
+        };
+        doc.image(stampPath, stampOptions);
+
+        // Rotate the stamp image
+      } else {
+        logger.warn(
+          `generateClearancePDF: Stamp image not found at path ${stampPath}`
+        );
+      }
+      // Function code
+      doc.end();
+
+      return new Promise((resolve, reject) => {
+        writeStream.on("finish", () => {
+          logger.info(
+            `generateClearancePDF: PDF generated successfully for clearanceId ${clearanceId} at ${filePath}`
+          );
+          // Resolve with the *relative* path to the file
+          resolve(`/uploads/clearance/${uniqueFilename}`);
+        });
+        writeStream.on("error", (error: any) => {
+          logger.error(
+            `generateClearancePDF: Error writing PDF for clearanceId ${clearanceId}, ${error}`
+          );
+          reject(error);
+        });
+      });
+    } catch (error) {
+      logger.error(
+        `generateClearancePDF: Error generating PDF for clearanceId ${clearanceId}, ${error}`
+      );
+      throw error;
+    }
+  }
+
   public async createClearance(
     clearanceData: Partial<IClearance>
   ): Promise<IClearance> {
@@ -16,14 +224,14 @@ class ClearanceService {
     try {
       const { tenant, property, moveOutDate, notes, reason } = clearanceData;
       const newClearance = new Clearance({
-        tenant: tenant, // use the tenant id
+        tenant: tenant,
         property,
         moveOutDate,
         notes,
         reason,
       });
 
-      await Tenant.findById(newClearance.tenant, {
+      await Tenant.findByIdAndUpdate(newClearance.tenant, {
         status: "pending",
       });
 
@@ -33,7 +241,7 @@ class ClearanceService {
       );
       return savedClearance;
     } catch (error) {
-      logger.error(`ClearanceService: createClearance failed`, error);
+      logger.error(`ClearanceService: createClearance failed, ${error}`);
       throw error;
     }
   }
@@ -51,6 +259,7 @@ class ClearanceService {
     );
     try {
       const { page = 1, limit = 10, search = "", status } = query;
+      const limitNumber = Number(limit) || 10; // Default to 1 if limit is invalid
       let searchQuery: any = {};
       if (search) {
         searchQuery.$or = [
@@ -65,21 +274,23 @@ class ClearanceService {
 
       const clearances = await Clearance.find(searchQuery)
         .populate("tenant")
-        .populate("property")
-        .skip((page - 1) * limit)
-        .limit(Number(limit));
+        .populate("property");
+      // .skip((page - 1) * limitNumber) removed
+      //.limit(limitNumber); removed for this purpose
       const totalClearances = await Clearance.countDocuments(searchQuery);
+      const totalPages =
+        limitNumber > 0 ? Math.ceil(totalClearances / limitNumber) : 1; //removed for this reason as well
       logger.info(
         `ClearanceService: getAllClearances - Fetched ${clearances.length} clearances, total: ${totalClearances}`
       );
       return {
         clearances,
-        totalPages: Math.ceil(totalClearances / limit),
+        totalPages,
         currentPage: Number(page),
         totalClearances,
       };
     } catch (error) {
-      logger.error(`ClearanceService: getAllClearances failed`, error);
+      logger.error(`ClearanceService: getAllClearances failed, ${error}`);
       throw error;
     }
   }
@@ -105,8 +316,7 @@ class ClearanceService {
       return clearance;
     } catch (error) {
       logger.error(
-        `ClearanceService: getClearanceById failed for clearanceId: ${id}`,
-        error
+        `ClearanceService: getClearanceById failed for clearanceId: ${id}, ${error}`
       );
       throw error;
     }
@@ -120,13 +330,18 @@ class ClearanceService {
       `ClearanceService: approveClearance called for clearanceId: ${id} by userId: ${userId}`
     );
     try {
+      // First, update the clearance status
       const updatedClearance = await Clearance.findByIdAndUpdate(
         id,
-        { status: "Approved", approvedBy: userId },
+        {
+          status: "Approved",
+          approvedBy: userId,
+        },
         { new: true }
       )
         .populate("approvedBy")
-        .populate("property");
+        .populate("property")
+        .populate("tenant"); // Make sure tenant is populated
 
       if (!updatedClearance) {
         logger.error(
@@ -135,33 +350,59 @@ class ClearanceService {
         throw new Error("Clearance request not found");
       }
 
-      // Update Property status to "Open" if clearance is approved
-      if (updatedClearance.status === "Approved" && updatedClearance.property) {
+      if (updatedClearance.property && updatedClearance.tenant) {
         await Property.findByIdAndUpdate(
           updatedClearance.property.id,
           { status: "open" },
           { new: true }
         );
-
-        await Tenant.findById(updatedClearance.tenant.id, {
-          status: "inactive",
-        });
-        logger.info(
-          `ClearanceService: approveClearance - Updated property status to Open for clearanceId: ${id}`
+        await Tenant.findByIdAndUpdate(
+          updatedClearance.tenant.id,
+          { status: "inactive" },
+          { new: true }
+        );
+      } else {
+        logger.error(
+          `property or tenant not found on updatedClearance with ID ${id}`
         );
       }
+      // Now, generate the PDF *after* the status is updated and other related changes
+      let fileUrl: string = "";
+      try {
+        fileUrl = await this.generateClearancePDF(id);
+      } catch (pdfError: any) {
+        logger.error(
+          `Error generating PDF for clearanceId: ${id}, ${pdfError}`
+        );
+        throw new Error(`Failed to generate PDF: ${pdfError.message}`);
+      }
+
+      const documentUpdate = await Clearance.findByIdAndUpdate(
+        id,
+        {
+          document: {
+            fileUrl: fileUrl,
+            documentType: "Clearance Approval Confirmation",
+          },
+        },
+        { new: true }
+      )
+        .populate("approvedBy")
+        .populate("property")
+        .populate("tenant");
+
       logger.info(
         `ClearanceService: approveClearance - Clearance approved for clearanceId: ${id} by userId: ${userId}`
       );
-      return updatedClearance;
+      return documentUpdate;
     } catch (error) {
       logger.error(
-        `ClearanceService: approveClearance failed for clearanceId: ${id}`,
-        error
+        `ClearanceService: approveClearance failed for clearanceId: ${id}, ${error}`
       );
       throw error;
     }
   }
+
   public async inspectClearance(
     id: string,
     userId: string,
@@ -194,12 +435,12 @@ class ClearanceService {
       return updatedClearance;
     } catch (error) {
       logger.error(
-        `ClearanceService: inspectClearance failed for clearanceId: ${id}`,
-        error
+        `ClearanceService: inspectClearance failed for clearanceId: ${id}, ${error}`
       );
       throw error;
     }
   }
+
   public async rejectClearance(
     id: string,
     userId: string
@@ -210,7 +451,7 @@ class ClearanceService {
     try {
       const updatedClearance = await Clearance.findByIdAndUpdate(
         id,
-        { status: "Rejected", approvedBy: userId },
+        { status: "Rejected", rejectedBy: userId },
         { new: true }
       ).populate("approvedBy");
 
@@ -226,8 +467,7 @@ class ClearanceService {
       return updatedClearance;
     } catch (error) {
       logger.error(
-        `ClearanceService: rejectClearance failed for clearanceId: ${id}`,
-        error
+        `ClearanceService: rejectClearance failed for clearanceId: ${id}, ${error}`
       );
       throw error;
     }
@@ -262,8 +502,7 @@ class ClearanceService {
       return updatedClearance;
     } catch (error) {
       logger.error(
-        `ClearanceService: updateClearance failed for clearanceId: ${id}`,
-        error
+        `ClearanceService: updateClearance failed for clearanceId: ${id}, ${error}`
       );
       throw error;
     }
@@ -286,12 +525,12 @@ class ClearanceService {
       return clearance;
     } catch (error) {
       logger.error(
-        `ClearanceService: deleteClearance failed for clearanceId: ${id}`,
-        error
+        `ClearanceService: deleteClearance failed for clearanceId: ${id}, ${error}`
       );
       throw error;
     }
   }
+
   public async getClearancesByInspectedUser(
     userId: string
   ): Promise<IClearance[]> {
@@ -308,12 +547,12 @@ class ClearanceService {
       return clearances;
     } catch (error) {
       logger.error(
-        `ClearanceService: getClearancesByInspectedUser failed for userId ${userId}`,
-        error
+        `ClearanceService: getClearancesByInspectedUser failed for userId ${userId}, ${error}`
       );
       throw error;
     }
   }
+
   public async getUninspectedClearances(): Promise<IClearance[]> {
     logger.info(`ClearanceService: getUninspectedClearances called`);
     try {
@@ -327,7 +566,45 @@ class ClearanceService {
       );
       return clearances;
     } catch (error) {
-      logger.error(`ClearanceService: getUninspectedClearances failed`, error);
+      logger.error(
+        `ClearanceService: getUninspectedClearances failed, ${error}`
+      );
+      throw error;
+    }
+  }
+
+  public async assignInspector(
+    id: string,
+    inspectorId: string
+  ): Promise<IClearance | null> {
+    logger.info(
+      `ClearanceService: assignInspector called for clearanceId: ${id} to userId: ${inspectorId}`
+    );
+    try {
+      const updatedClearance = await Clearance.findByIdAndUpdate(
+        id,
+        { inspectionBy: inspectorId, inspectionStatus: "Scheduled" },
+        { new: true }
+      )
+        .populate("tenant")
+        .populate("property")
+        .populate("inspectionBy"); // Populate the assigned inspector
+
+      if (!updatedClearance) {
+        logger.error(
+          `ClearanceService: assignInspector - Clearance with ID ${id} not found`
+        );
+        throw new Error("Clearance request not found");
+      }
+      logger.info(
+        `ClearanceService: assignInspector - Assigned inspector for clearanceId: ${id}`
+      );
+      return updatedClearance;
+    } catch (error) {
+      logger.error(
+        `ClearanceService: assignInspector failed for clearanceId: ${id}`,
+        error
+      );
       throw error;
     }
   }

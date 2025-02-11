@@ -1,3 +1,4 @@
+// models/clearance.model.ts
 import { model, Schema } from "mongoose";
 import { IClearance } from "../interfaces/clearance.interface";
 
@@ -28,6 +29,11 @@ const clearanceSchema = new Schema<IClearance>(
     },
     inspectionDate: { type: Date },
     feedback: { type: String },
+    document: {
+      // Added document field
+      fileUrl: { type: String },
+      documentType: { type: String },
+    },
   },
   { timestamps: true }
 );
