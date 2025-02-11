@@ -5,12 +5,12 @@ const equipmentCostSchema = new Schema({
   quantity: { type: Number, required: true },
   pricePerUnit: { type: Number, required: true },
   total: { type: Number, required: true },
+  description: { type: String },
 });
 
 const expenseSchema = new Schema({
   laborCost: { type: Number },
   equipmentCost: [equipmentCostSchema],
-  description: { type: String },
 });
 
 const maintenanceSchema = new Schema<IMaintenance>(
