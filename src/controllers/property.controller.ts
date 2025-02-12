@@ -328,5 +328,28 @@ class PropertyController {
         );
     }
   }
+  public async getOpenPropertiesByUserAdminId(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { userAdminId } = req.params;
+      const query = req.query;
+      const properties = await propertyService.getOpenPropertiesByUserAdminID(
+        userAdminId,
+        query
+      );
+
+      res
+        .status(200)
+        .json(
+          successResponse(properties, "Open properties fetched successfully")
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(errorResponse(error.message, "Failed to fetch open properties"));
+    }
+  }
 }
 export const propertyController = new PropertyController();

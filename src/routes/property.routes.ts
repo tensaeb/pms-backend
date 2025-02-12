@@ -54,6 +54,13 @@ router.get(
   propertyController.getPropertiesByUserId
 );
 
+// get open properties by registeredBy id
+router.get(
+  "/userAdmin/:userAdminId/open", // Updated route path
+  authenticate,
+  propertyController.getOpenPropertiesByUserAdminId // Updated controller method
+);
+
 // get properties by registeredBy id
 router.get(
   "/userAdmin/:userAdminId",
