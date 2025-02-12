@@ -1,4 +1,3 @@
-// complaint.route.ts
 import express from "express";
 import multer from "multer";
 import { complaintController } from "../controllers/complaint.controller";
@@ -67,6 +66,9 @@ router.get(
   "/registered/:userId",
   complaintController.getComplaintsByRegisteredUser
 );
+
+// *** ADD THIS ROUTE ***
+router.get("/user/:userId", complaintController.getComplaintsByCreatedBy);
 
 router.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 export default router;

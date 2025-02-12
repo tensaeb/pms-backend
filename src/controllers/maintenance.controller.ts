@@ -1,4 +1,3 @@
-// maintenance.controller.ts
 import { Request, Response } from "express";
 import { errorResponse, successResponse } from "../utils/apiResponse";
 import { maintenanceService } from "../services/maintenance.service";
@@ -439,6 +438,69 @@ class MaintenanceController {
       res
         .status(500)
         .json({ message: "Failed to generate report", error: error.message });
+    }
+  }
+
+  // *** ADD THIS METHOD ***
+  public async getMaintenancesByTenantId(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { tenantId } = req.params;
+      const maintenanceRequests =
+        await maintenanceService.getMaintenancesByTenantId(tenantId, req.query);
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            maintenanceRequests,
+            "Maintenance requests for the tenant fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch maintenance requests for the tenant"
+          )
+        );
+    }
+  }
+
+  // *** ADD THIS METHOD ***
+  public async getMaintenancesByAssignedMaintainer(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { assignedMaintainer } = req.params;
+      const maintenanceRequests =
+        await maintenanceService.getMaintenancesByAssignedMaintainer(
+          assignedMaintainer,
+          req.query
+        );
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            maintenanceRequests,
+            "Maintenance requests for the assigned maintainer fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch maintenance requests for the assigned maintainer"
+          )
+        );
     }
   }
 }

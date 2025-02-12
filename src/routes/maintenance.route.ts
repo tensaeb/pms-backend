@@ -105,6 +105,18 @@ router.get(
   maintenanceController.getMaintenanceRequestsByRegisteredUser
 );
 
+// *** ADD THIS ROUTE ***
+router.get(
+  "/tenant/:tenantId",
+  maintenanceController.getMaintenancesByTenantId
+);
+
+// *** ADD THIS ROUTE ***
+router.get(
+  "/assigned/:assignedMaintainer",
+  maintenanceController.getMaintenancesByAssignedMaintainer
+);
+
 // Serve static files from the 'uploads' directory
 router.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 

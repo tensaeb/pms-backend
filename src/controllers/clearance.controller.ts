@@ -5,9 +5,13 @@ import { clearanceService } from "../services/clearance.service";
 class ClearanceController {
   public async createClearance(req: Request, res: Response): Promise<void> {
     try {
-      const newClearance = await clearanceService.createClearance({
-        ...req.body,
-      });
+      const loggedInUserId = req.user?.id;
+      const newClearance = await clearanceService.createClearance(
+        {
+          ...req.body,
+        },
+        loggedInUserId
+      );
       res
         .status(201)
         .json(
@@ -234,6 +238,37 @@ class ClearanceController {
         .status(500)
         .json(
           errorResponse(error.message, "Failed to fetch uninspected clearances")
+        );
+    }
+  }
+  // *** ADD THIS METHOD ***
+  public async getClearancesByTenantId(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { tenantId } = req.params;
+      const clearances = await clearanceService.getClearancesByTenantId(
+        tenantId,
+        req.query
+      );
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            clearances,
+            "Clearance requests for the tenant fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch clearance requests for the tenant"
+          )
         );
     }
   }

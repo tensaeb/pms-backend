@@ -4,7 +4,7 @@ import { IClearance } from "../interfaces/clearance.interface";
 
 const clearanceSchema = new Schema<IClearance>(
   {
-    tenant: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
+    tenant: { type: Schema.Types.ObjectId, ref: "User", required: true },
     property: { type: Schema.Types.ObjectId, ref: "Property", required: true },
     moveOutDate: { type: Date, required: true },
     status: {

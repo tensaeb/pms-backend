@@ -1,4 +1,3 @@
-// complaint.controller.ts
 import { Request, Response } from "express";
 import { errorResponse, successResponse } from "../utils/apiResponse";
 import { complaintService } from "../services/complaint.service";
@@ -12,7 +11,6 @@ class ComplaintController {
       const newComplaint = await complaintService.createComplaint(
         {
           ...req.body,
-          tenant: user?.id,
         },
         uploadedFiles,
         user?.id
@@ -206,6 +204,36 @@ class ComplaintController {
           errorResponse(
             error.message,
             "Failed to fetch complaints for the registered user"
+          )
+        );
+    }
+  }
+  // *** ADD THIS METHOD ***
+  public async getComplaintsByCreatedBy(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { tenantId } = req.params;
+      const complaints = await complaintService.getComplaintsByCreatedBy(
+        tenantId,
+        req.query
+      );
+      res
+        .status(200)
+        .json(
+          successResponse(
+            complaints,
+            "Complaints for the tenant fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch complaints for the tenant"
           )
         );
     }

@@ -1,4 +1,3 @@
-// complaint.service.ts
 import { Complaint } from "../models/complaint.model";
 import { IComplaint } from "../interfaces/complaint.interface";
 import { User } from "../models/user.model";
@@ -351,6 +350,64 @@ class ComplaintService {
       logger.error(
         `Error getting complaints by users registered by ${registeredBy}: ${error}`
       );
+      throw error;
+    }
+  }
+
+  // *** ADD THIS METHOD ***
+  public async getComplaintsByCreatedBy(
+    userId: string,
+    query: any
+  ): Promise<{
+    complaints: Partial<IComplaint>[];
+    totalPages: number;
+    currentPage: number;
+    totalComplaints: number;
+  }> {
+    try {
+      const { page = 1, limit = 10, search = "", status } = query;
+
+      const searchQuery: any = {
+        createdBy: userId,
+      };
+
+      if (search) {
+        searchQuery.$or = [
+          { "property.name": { $regex: search, $options: "i" } },
+          { complaintType: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } }, // Add description search
+        ];
+      }
+
+      if (status) {
+        searchQuery.status = status;
+      }
+
+      const complaints = await Complaint.find(searchQuery)
+        .populate("property")
+        .populate({
+          path: "createdBy",
+          populate: {
+            path: "registeredBy",
+          },
+        })
+        .skip((page - 1) * limit)
+        .limit(Number(limit));
+
+      const totalComplaints = await Complaint.countDocuments(searchQuery);
+
+      logger.info(
+        `Retrieved ${complaints.length} complaints for User ${userId} (page ${page}, limit ${limit}, search "${search}", status "${status}"). Total complaints: ${totalComplaints}`
+      );
+
+      return {
+        complaints,
+        totalPages: Math.ceil(totalComplaints / limit),
+        currentPage: Number(page),
+        totalComplaints,
+      };
+    } catch (error) {
+      logger.error(`Error getting complaints for user ${userId}: ${error}`);
       throw error;
     }
   }

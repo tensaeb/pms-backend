@@ -214,7 +214,8 @@ class ClearanceService {
   }
 
   public async createClearance(
-    clearanceData: Partial<IClearance>
+    clearanceData: Partial<IClearance>,
+    loggedInUserId?: string
   ): Promise<IClearance> {
     logger.info(
       `ClearanceService: createClearance called with data: ${JSON.stringify(
@@ -222,9 +223,9 @@ class ClearanceService {
       )}`
     );
     try {
-      const { tenant, property, moveOutDate, notes, reason } = clearanceData;
+      const { property, moveOutDate, notes, reason } = clearanceData;
       const newClearance = new Clearance({
-        tenant: tenant,
+        tenant: loggedInUserId,
         property,
         moveOutDate,
         notes,
@@ -604,6 +605,67 @@ class ClearanceService {
       logger.error(
         `ClearanceService: assignInspector failed for clearanceId: ${id}`,
         error
+      );
+      throw error;
+    }
+  }
+
+  // *** ADD THIS METHOD ***
+  public async getClearancesByTenantId(
+    tenantId: string,
+    query: any
+  ): Promise<{
+    clearances: Partial<IClearance>[];
+    totalPages: number;
+    currentPage: number;
+    totalClearances: number;
+  }> {
+    logger.info(
+      `ClearanceService: getClearancesByTenantId called for tenantId: ${tenantId} with query: ${JSON.stringify(
+        query
+      )}`
+    );
+    try {
+      const { page = 1, limit = 10, search = "", status } = query;
+      const limitNumber = Number(limit) || 10;
+
+      const searchQuery: any = {
+        tenant: tenantId,
+      };
+
+      if (search) {
+        searchQuery.$or = [
+          { "property.name": { $regex: search, $options: "i" } },
+          { reason: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      if (status) {
+        searchQuery.status = status;
+      }
+
+      const clearances = await Clearance.find(searchQuery)
+        .populate("tenant")
+        .populate("property")
+        .skip((page - 1) * limitNumber)
+        .limit(limitNumber);
+
+      const totalClearances = await Clearance.countDocuments(searchQuery);
+      const totalPages = Math.ceil(totalClearances / limitNumber);
+
+      logger.info(
+        `ClearanceService: getClearancesByTenantId - Fetched ${clearances.length} clearances for tenant ${tenantId}, total: ${totalClearances}`
+      );
+
+      return {
+        clearances,
+        totalPages,
+        currentPage: Number(page),
+        totalClearances,
+      };
+    } catch (error) {
+      logger.error(
+        `ClearanceService: getClearancesByTenantId failed for tenantId: ${tenantId}, ${error}`
       );
       throw error;
     }

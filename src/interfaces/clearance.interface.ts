@@ -3,7 +3,7 @@ import { ITenant } from "./tenant.interface";
 import { IProperty } from "./property.interface";
 
 export interface IClearance extends Document {
-  tenant: Types.ObjectId | ITenant;
+  tenant: Types.ObjectId;
   property: Types.ObjectId | IProperty;
   moveOutDate: Date;
   status: string;
