@@ -14,6 +14,7 @@ import { Parser } from "@json2csv/plainjs";
 import { PropertyStatus, isPropertyStatus } from "../utils/typeCheckers";
 import * as XLSX from "xlsx";
 import logger from "../utils/logger";
+import mongoose from "mongoose";
 
 class PropertyService {
   private readonly parser = new Parser();
@@ -442,41 +443,76 @@ class PropertyService {
   }> {
     try {
       const { page = 1, limit = 10, search = "" } = query;
-
-      // Fetch properties that were created by users registered by the loggedInUserId.
-      const searchQuery: any = {
-        "userCreated.registeredBy": userAdminId,
-        status: { $ne: "deleted" },
-        $or: [{ title: { $regex: search, $options: "i" } }],
-      };
-
-      const [properties, totalProperties] = await Promise.all([
-        Property.find(searchQuery)
-          .populate({
-            path: "userCreated",
-            select: "registeredBy",
-          })
-          .select("-__v")
-          .skip((page - 1) * limit)
-          .limit(Number(limit))
-          .lean(),
-        Property.countDocuments(searchQuery),
-      ]);
+      const { ObjectId } = mongoose.Types;
 
       logger.info(
-        `Retrieved ${properties.length} properties for admin user ${userAdminId} (page ${page}, limit ${limit}, search "${search}"). Total properties: ${totalProperties}`
+        `Attempting to retrieve properties for admin ID: ${userAdminId} (page ${page}, limit ${limit}, search "${search}")`
+      );
+
+      const propertiesAggregation = await Property.aggregate([
+        {
+          $match: {
+            // Initial filter on fields in Property
+            status: { $ne: "deleted" },
+            ...(search
+              ? { $or: [{ title: { $regex: search, $options: "i" } }] }
+              : {}),
+          },
+        },
+        {
+          $lookup: {
+            from: "users", // Collection name for User
+            localField: "userCreated",
+            foreignField: "_id",
+            as: "userCreated", //  Result will be an array, even if only one document matches
+          },
+        },
+        { $unwind: "$userCreated" }, //Convert array result of lookup to object
+        {
+          $match: {
+            // Filter on the joined user
+            "userCreated.registeredBy": new ObjectId(userAdminId),
+          },
+        },
+        {
+          $facet: {
+            properties: [
+              //Apply pagination and project to remove unwanted fields
+              { $skip: (Number(page) - 1) * Number(limit) },
+              { $limit: Number(limit) },
+              { $project: { __v: 0 } },
+            ],
+            totalProperties: [{ $count: "count" }], // Gets the count of the documents
+          },
+        },
+      ]);
+
+      const properties = propertiesAggregation[0]?.properties || []; // Access properties from the facet
+      const totalProperties =
+        propertiesAggregation[0]?.totalProperties[0]?.count || 0;
+
+      logger.info(
+        `Aggregation result: ${properties.length} properties found, ${totalProperties} total properties matching the criteria.`
+      );
+
+      const totalPages = Math.ceil(totalProperties / Number(limit));
+      const numberOfProperties = properties.length;
+
+      logger.info(
+        `Returning properties (page ${page}, limit ${limit}): ${numberOfProperties} properties, total pages: ${totalPages}`
       );
 
       return {
         properties,
-        totalPages: Math.ceil(totalProperties / limit),
+        totalPages,
         currentPage: Number(page),
         totalProperties,
-        numberOfProperties: properties.length,
+        numberOfProperties,
       };
-    } catch (error) {
+    } catch (error: any) {
       logger.error(
-        `Error getting properties by admin user ID ${userAdminId}: ${error}`
+        `Error in getPropertiesByUserAdminID: ${error.message}`,
+        error
       );
       throw error;
     }

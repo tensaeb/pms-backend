@@ -38,7 +38,7 @@ const userSchema = new Schema<IUser>(
         return twoMonthsFromNow;
       },
     },
-    registeredBy: { type: Schema.Types.ObjectId, ref: "User" }, // Field to store who registered the user
+    registeredBy: { type: Schema.Types.ObjectId, ref: "User" },
     maintenanceSkills: {
       type: [String],
       enum: ["Plumbing", "Electrical", "HVAC", "Appliance Repair", "Other"],
