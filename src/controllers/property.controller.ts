@@ -232,12 +232,13 @@ class PropertyController {
     res: Response
   ): Promise<void> {
     try {
-      const { registeredBy } = req.params;
+      const { userAdminId } = req.params;
       const query = req.query;
       const properties = await propertyService.getPropertiesByUserAdminID(
-        registeredBy,
+        userAdminId,
         query
       );
+
       res
         .status(200)
         .json(successResponse(properties, "Properties fetched successfully"));
