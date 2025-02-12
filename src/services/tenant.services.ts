@@ -9,6 +9,7 @@ import { User } from "../models/user.model";
 import { IUser } from "../interfaces/user.interface";
 import { randomInt } from "crypto";
 import logger from "../utils/logger"; // Import logger
+import mongoose from "mongoose";
 
 class TenantService {
   public async createTenant(
@@ -24,6 +25,19 @@ class TenantService {
         throw new Error("Tenant name and email are required.");
       }
 
+      if (!loggedInUserId) {
+        logger.warn("loggedInUserId is required to create a tenant.");
+        throw new Error("loggedInUserId is required.");
+      }
+
+      const loggedInUser = await User.findById(loggedInUserId);
+      if (!loggedInUser) {
+        logger.warn(`User with ID ${loggedInUserId} not found.`);
+        throw new Error("User not found.");
+      }
+
+      const registeredByAdmin = loggedInUser.registeredBy;
+
       const defaultPassword = randomInt(10000, 100000).toString();
       const unhashedPassword = password || defaultPassword;
       const hashedPassword = await bcrypt.hash(unhashedPassword, 10);
@@ -33,6 +47,7 @@ class TenantService {
         ...tenantData,
         password: hashedPassword,
         registeredBy: loggedInUserId,
+        registeredByAdmin: registeredByAdmin, // Add the registeredByAdmin field
       });
 
       // Save the tenant first to get the ID
@@ -75,6 +90,7 @@ class TenantService {
         role: "Tenant",
         tempPassword: defaultPassword,
         registeredBy: loggedInUserId,
+        registeredByAdmin: registeredByAdmin, // Add the registeredByAdmin field
       });
 
       try {

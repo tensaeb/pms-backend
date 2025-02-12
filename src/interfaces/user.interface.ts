@@ -17,6 +17,10 @@ export interface IUser extends Document {
     type: typeof Schema.Types.ObjectId;
     ref: string;
   };
+  registeredByAdmin: {
+    type: typeof Schema.Types.ObjectId;
+    ref: string;
+  };
   tempPassword: string;
   maintenanceSkills: [string];
   permissions: {

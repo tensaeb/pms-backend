@@ -5,6 +5,7 @@ const tenantSchema = new Schema<ITenant>(
   {
     user: { type: Schema.Types.ObjectId, ref: "User" },
     registeredBy: { type: Schema.Types.ObjectId, ref: "User" },
+    registeredByAdmin: { type: Schema.Types.ObjectId, ref: "User" },
     tenantName: { type: String, required: true },
     contactInformation: {
       email: { type: String, required: true, unique: true },

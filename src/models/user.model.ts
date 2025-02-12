@@ -39,6 +39,7 @@ const userSchema = new Schema<IUser>(
       },
     },
     registeredBy: { type: Schema.Types.ObjectId, ref: "User" },
+    registeredByAdmin: { type: Schema.Types.ObjectId, ref: "User" },
     maintenanceSkills: {
       type: [String],
       enum: ["Plumbing", "Electrical", "HVAC", "Appliance Repair", "Other"],
