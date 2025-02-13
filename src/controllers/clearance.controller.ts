@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { errorResponse, successResponse } from "../utils/apiResponse";
 import { clearanceService } from "../services/clearance.service";
+import mongoose from "mongoose";
 
 class ClearanceController {
   public async createClearance(req: Request, res: Response): Promise<void> {
@@ -270,6 +271,45 @@ class ClearanceController {
             "Failed to fetch clearance requests for the tenant"
           )
         );
+    }
+  }
+
+  // *** ADD THIS METHOD ***
+  public async getClearancesByRegisteredBy(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredBy } = req.params;
+      const clearances = await clearanceService.getClearancesByRegisteredBy(
+        registeredBy,
+        req.query
+      );
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            clearances,
+            "Clearance requests for the registeredBy fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      if (error instanceof mongoose.Error.ValidationError) {
+        // Handle Mongoose validation errors (e.g., invalid ObjectId)
+        res
+          .status(400)
+          .json(errorResponse(error.message, "Invalid Input Parameters"));
+      } else {
+        res
+          .status(500)
+          .json(
+            errorResponse(
+              error.message,
+              "Failed to fetch clearance requests for the registeredBy"
+            )
+          );
+      }
     }
   }
 }

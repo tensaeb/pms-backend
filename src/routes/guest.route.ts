@@ -1,3 +1,4 @@
+// guest.routes.ts
 import express from "express";
 import { authenticate } from "../middlewares/authMiddleware";
 import { guestController } from "../controllers/guest.controller";
@@ -5,6 +6,8 @@ import { guestController } from "../controllers/guest.controller";
 const router = express.Router();
 
 router.post("/", authenticate, guestController.createGuest);
+
+router.get("/user", authenticate, guestController.getGuestsForCurrentUser);
 
 router.get("/", authenticate, guestController.fetchAllGuests);
 

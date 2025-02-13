@@ -1,4 +1,4 @@
-// guest.service.js
+// guest.service.ts
 import { IGuest } from "../interfaces/guest.interface";
 import { Guest } from "../models/guest.model";
 import { User } from "../models/user.model";
@@ -7,6 +7,7 @@ import QRCode from "qrcode";
 import * as fs from "fs";
 import path from "path";
 import logger from "../utils/logger"; // Import logger
+import mongoose from "mongoose";
 
 class GuestService {
   private readonly UPLOAD_DIR = path.join(process.cwd(), "uploads", "guests");
@@ -41,7 +42,7 @@ class GuestService {
       const fileName = `${guest.id}.svg`;
       const filePath = path.join(userFolder, fileName);
 
-      const qrCodeData = guest.id;
+      const qrCodeData = `https://pms-backend-sncw.onrender.com/api/v1/guests/${guest.id}`;
 
       if (qrCodeData.length > 200) {
         throw new Error("Data size too large for QR code.");
@@ -317,6 +318,56 @@ class GuestService {
       logger.error(
         `Error getting guests registered by ${registeredBy}: ${error}`
       );
+      throw error;
+    }
+  }
+
+  public async getGuestsForCurrentUser(
+    userId: string,
+    query: any
+  ): Promise<{
+    guests: Partial<IGuest>[];
+    totalPages: number;
+    currentPage: number;
+    totalGuests: number;
+  }> {
+    try {
+      const { page = 1, limit = 10, search = "" } = query;
+
+      const searchQuery: any = {
+        user: userId, //  Directly filtering by the user ID
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+          { phoneNumber: { $regex: search, $options: "i" } },
+        ],
+      };
+
+      const [guests, totalGuests] = await Promise.all([
+        Guest.find(searchQuery)
+          .populate("user")
+          .populate("property")
+          .skip((page - 1) * limit)
+          .limit(Number(limit))
+          .lean(), // Added .lean() for performance
+        Guest.countDocuments(searchQuery),
+      ]);
+      const updatedGuests = await Promise.all(
+        guests.map((guest) => this.updateGuestStatus(guest))
+      );
+
+      logger.info(
+        `Retrieved ${guests.length} guests for current user (page ${page}, limit ${limit}, search "${search}"). Total guests: ${totalGuests}`
+      );
+
+      return {
+        guests: updatedGuests,
+        totalPages: Math.ceil(totalGuests / Number(limit)),
+        currentPage: Number(page),
+        totalGuests,
+      };
+    } catch (error) {
+      logger.error(`Error getting guests for current user: ${error}`);
       throw error;
     }
   }

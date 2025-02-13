@@ -1,6 +1,8 @@
+// guest.controller.ts
 import { Request, Response } from "express";
 import { guestService } from "../services/guest.services";
 import { errorResponse, successResponse } from "../utils/apiResponse";
+import mongoose from "mongoose";
 
 class GuestController {
   async createGuest(req: Request, res: Response): Promise<void> {
@@ -104,6 +106,41 @@ class GuestController {
         .status(500)
         .json(
           errorResponse(error.message, "Failed to fetch guest by registered By")
+        );
+    }
+  }
+
+  public async getGuestsForCurrentUser(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      // Access the user ID from the authenticated user in the request
+      const userId = req.user?.id;
+
+      if (!userId) {
+        res.status(401).json(errorResponse("User not authenticated."));
+        return;
+      }
+      const query = req.query; // Extract query parameters for pagination/filtering
+
+      const result = await guestService.getGuestsForCurrentUser(userId, query);
+      res
+        .status(200)
+        .json(
+          successResponse(
+            result,
+            "Guests fetched successfully for current user."
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch guests for current user."
+          )
         );
     }
   }

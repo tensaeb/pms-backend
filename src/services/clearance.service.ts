@@ -7,6 +7,7 @@ import PDFDocument from "pdfkit";
 import path from "path";
 import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
+import mongoose from "mongoose";
 
 interface ImageOptions {
   fit: [number, number];
@@ -666,6 +667,116 @@ class ClearanceService {
     } catch (error) {
       logger.error(
         `ClearanceService: getClearancesByTenantId failed for tenantId: ${tenantId}, ${error}`
+      );
+      throw error;
+    }
+  }
+
+  // *** ADD THIS METHOD ***
+  public async getClearancesByRegisteredBy(
+    registeredBy: string,
+    query: any
+  ): Promise<{
+    clearances: Partial<IClearance>[];
+    totalPages: number;
+    currentPage: number;
+    totalClearances: number;
+  }> {
+    logger.info(
+      `ClearanceService: getClearancesByRegisteredBy called for registeredBy: ${registeredBy} with query: ${JSON.stringify(
+        query
+      )}`
+    );
+    try {
+      const { page = 1, limit = 10, search = "", status } = query;
+      const limitNumber = Number(limit) || 10;
+      const { ObjectId } = mongoose.Types;
+
+      // Validate registeredBy
+      if (!mongoose.Types.ObjectId.isValid(registeredBy)) {
+        logger.warn(`Invalid registeredBy value: ${registeredBy}`);
+        return {
+          clearances: [],
+          totalPages: 0,
+          currentPage: Number(page),
+          totalClearances: 0,
+        };
+      }
+
+      const propertiesAggregation = await Clearance.aggregate([
+        {
+          $lookup: {
+            from: "users", // Changed from 'tenants' to 'users' to join with the User model
+            localField: "tenant", // Clearance.tenant (ObjectId)
+            foreignField: "_id", // User._id (ObjectId)
+            as: "tenantDetails", // Renamed from "tenant" to "tenantDetails" for clarity
+          },
+        },
+        { $unwind: "$tenantDetails" }, // Unwind the tenantDetails array to get a single tenant object
+        {
+          $match: {
+            // Apply conditions to the unwound tenant object.
+            "tenantDetails.registeredBy": new ObjectId(registeredBy),
+          },
+        },
+        {
+          $lookup: {
+            from: "properties", // Changed from 'properties' to 'properties'
+            localField: "property", // Join based on Clearance.property (ObjectId)
+            foreignField: "_id", // Properties._id (ObjectId)
+            as: "propertyDetails", // Renamed from "property" to "propertyDetails" for clarity
+          },
+        },
+        { $unwind: "$propertyDetails" }, // Convert the result from array of 1 to 1 object
+        {
+          $match: {
+            ...(search
+              ? {
+                  $or: [
+                    {
+                      "propertyDetails.title": {
+                        $regex: search,
+                        $options: "i",
+                      },
+                    },
+                    { reason: { $regex: search, $options: "i" } },
+                  ],
+                }
+              : {}),
+            ...(status ? { status: status } : {}),
+          },
+        },
+        {
+          $facet: {
+            clearances: [
+              //Apply pagination and project to remove unwanted fields
+              { $skip: (Number(page) - 1) * Number(limitNumber) },
+              { $limit: Number(limitNumber) },
+              { $project: { __v: 0, tenantDetails: 0, propertyDetails: 0 } }, // Remove joined results from the properties data output to make it less heavy
+            ],
+            totalClearances: [{ $count: "count" }], // Gets the count of the documents
+          },
+        },
+      ]);
+
+      const clearances = propertiesAggregation[0]?.clearances || []; // Access properties from the facet
+      const totalClearances =
+        propertiesAggregation[0]?.totalClearances[0]?.count || 0;
+      const totalPages = Math.ceil(totalClearances / Number(limitNumber));
+
+      logger.info(
+        `ClearanceService: getClearancesByRegisteredBy - Fetched ${clearances.length} clearances for registeredBy ${registeredBy}, total: ${totalClearances}`
+      );
+
+      return {
+        clearances,
+        totalPages,
+        currentPage: Number(page),
+        totalClearances,
+      };
+    } catch (error) {
+      logger.error(
+        `ClearanceService: getClearancesByRegisteredBy failed for registeredBy: ${registeredBy}, ${error}`
       );
       throw error;
     }
