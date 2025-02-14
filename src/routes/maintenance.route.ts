@@ -117,6 +117,12 @@ router.get(
   maintenanceController.getMaintenancesByAssignedMaintainer
 );
 
+// *** ADD THIS ROUTE ***
+router.get(
+  "/registered-by-admin/:registeredByAdmin",
+  maintenanceController.getMaintenancesByRegisteredByAdmin
+);
+
 // Serve static files from the 'uploads' directory
 router.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 

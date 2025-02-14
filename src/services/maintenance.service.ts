@@ -10,6 +10,7 @@ import { propertyService } from "../services/property.services";
 import { PropertyStatus, isPropertyStatus } from "../utils/typeCheckers";
 import { Property } from "../models/property.model";
 import logger from "../utils/logger"; // Import logger
+import { Types } from "mongoose";
 
 class MaintenanceService {
   private readonly UPLOAD_DIR = path.join(
@@ -541,6 +542,8 @@ class MaintenanceService {
         tenant: { $in: registeredUserIds },
       };
 
+      console.log("Search Query: ", searchQuery);
+
       if (search) {
         searchQuery.$or = [
           { "tenant.name": { $regex: search, $options: "i" } },
@@ -791,6 +794,85 @@ class MaintenanceService {
     } catch (error) {
       logger.error(
         `Error getting maintenance requests for tenant ${tenantId}: ${error}`
+      );
+      throw error;
+    }
+  }
+  // *** ADD THIS METHOD ***
+  public async getMaintenancesByRegisteredByAdmin(
+    registeredByAdmin: string,
+    query: any
+  ): Promise<{
+    maintenanceRequests: Partial<IMaintenance>[];
+    totalPages: number;
+    currentPage: number;
+    totalMaintenanceRequests: number;
+  }> {
+    try {
+      const { page = 1, limit = 10, search = "", status } = query;
+      const parsedLimit = Number(limit); // Ensure limit is a number
+      const skip = (page - 1) * parsedLimit;
+
+      // First, find all users registered by this admin
+      const registeredUsers = await User.find({
+        registeredByAdmin: registeredByAdmin,
+      });
+
+      const registeredUserIds = registeredUsers.map((user) => user._id);
+
+      //If no users are registered by the admin, return empty
+      if (registeredUserIds.length === 0) {
+        logger.info(
+          `No users registered by admin ${registeredByAdmin}. Returning empty results.`
+        );
+        return {
+          maintenanceRequests: [],
+          totalPages: 0,
+          currentPage: Number(page),
+          totalMaintenanceRequests: 0,
+        };
+      }
+
+      const searchQuery: any = {
+        tenant: { $in: registeredUserIds },
+      };
+      console.log("Search Query: ", searchQuery);
+
+      if (search) {
+        searchQuery.$or = [
+          { "tenant.name": { $regex: search, $options: "i" } },
+          { "property.name": { $regex: search, $options: "i" } },
+          { typeOfRequest: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      if (status) {
+        searchQuery.status = status;
+      }
+
+      const maintenanceRequests = await Maintenance.find(searchQuery)
+        .populate("tenant")
+        .populate("property")
+        .skip(skip)
+        .limit(parsedLimit);
+
+      const totalMaintenanceRequests = await Maintenance.countDocuments(
+        searchQuery
+      );
+
+      logger.info(
+        `Retrieved maintenance requests created by users registered by admin ${registeredByAdmin} (page ${page}, limit ${limit}, search "${search}", status "${status}"). Total requests: ${totalMaintenanceRequests}`
+      );
+
+      return {
+        maintenanceRequests,
+        totalPages: Math.ceil(totalMaintenanceRequests / parsedLimit),
+        currentPage: Number(page),
+        totalMaintenanceRequests,
+      };
+    } catch (error) {
+      logger.error(
+        `Error getting maintenance requests created by users registered by admin ${registeredByAdmin}: ${error}`
       );
       throw error;
     }

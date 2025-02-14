@@ -503,6 +503,38 @@ class MaintenanceController {
         );
     }
   }
+  // *** ADD THIS METHOD ***
+  public async getMaintenancesByRegisteredByAdmin(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredByAdmin } = req.params;
+      const maintenanceRequests =
+        await maintenanceService.getMaintenancesByRegisteredByAdmin(
+          registeredByAdmin,
+          req.query
+        );
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            maintenanceRequests,
+            "Maintenance requests for users registered by admin fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch maintenance requests for users registered by admin"
+          )
+        );
+    }
+  }
 }
 
 export const maintenanceController = new MaintenanceController();
