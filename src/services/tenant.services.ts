@@ -439,33 +439,44 @@ class TenantService {
     }
   }
 
-  public async getTenantsByUserAdmin(registeredBy: string, query: any) {
+  public async getTenantsByUserAdmin(
+    registeredByAdmin: string,
+    query: any
+  ): Promise<{
+    tenants: Partial<ITenant & { tenantUser?: IUser }>[];
+    totalPages: number;
+    currentPage: number;
+    totalTenants: number;
+  }> {
     try {
       const { page = 1, limit = 10, search = "" } = query;
 
-      // First, find all users registered by this ID
-      const registeredUsers = await User.find({ registeredBy: registeredBy });
-      const registeredUserIds = registeredUsers.map((user) => user._id);
-
       const searchQuery: any = {
-        registeredBy: { $in: registeredUserIds },
+        registeredByAdmin: registeredByAdmin, // Directly use registeredByAdmin to find tenants
         tenantName: { $regex: search, $options: "i" },
       };
 
       const tenants = await Tenant.find(searchQuery)
-        .populate({
-          path: "registeredBy",
-          select: "name email role status",
-        })
         .populate("propertyInformation")
-        .populate("user")
+        .populate("registeredBy") // Keep this to show the creator of the tenant
         .skip((page - 1) * limit)
         .limit(Number(limit))
         .lean();
 
+      // Fetch tenantUser for each tenant based on their email
+      for (const tenant of tenants) {
+        const tenantUser = await User.findOne({
+          email: tenant.contactInformation.email,
+        }).lean();
+
+        if (tenantUser) {
+          (tenant as any).tenantUser = tenantUser; // Add tenantUser data to the tenant object
+        }
+      }
+
       const totalTenants = await Tenant.countDocuments(searchQuery);
       logger.info(
-        `Retrieved tenants registered by users with ID ${registeredBy} (page ${page}, limit ${limit}, search "${search}"). Total tenants: ${totalTenants}`
+        `Retrieved tenants registered by admin with ID ${registeredByAdmin} (page ${page}, limit ${limit}, search "${search}"). Total tenants: ${totalTenants}`
       );
 
       return {
