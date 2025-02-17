@@ -810,7 +810,7 @@ class MaintenanceService {
   }> {
     try {
       const { page = 1, limit = 10, search = "", status } = query;
-      const parsedLimit = Number(limit); // Ensure limit is a number
+      const parsedLimit = Number(limit);
       const skip = (page - 1) * parsedLimit;
 
       // First, find all users registered by this admin
