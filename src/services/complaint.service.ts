@@ -1,3 +1,5 @@
+// complaint.service.ts
+
 import { Complaint } from "../models/complaint.model";
 import { IComplaint } from "../interfaces/complaint.interface";
 import { User } from "../models/user.model";
@@ -5,6 +7,7 @@ import sharp from "sharp";
 import * as fs from "fs";
 import * as path from "path";
 import logger from "../utils/logger"; // Import the logger
+import { Types } from "mongoose";
 
 class ComplaintService {
   private readonly UPLOAD_DIR = path.join(
@@ -385,6 +388,7 @@ class ComplaintService {
 
       const complaints = await Complaint.find(searchQuery)
         .populate("property")
+        .populate("tenant")
         .populate({
           path: "createdBy",
           populate: {

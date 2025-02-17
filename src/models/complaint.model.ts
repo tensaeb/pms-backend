@@ -5,7 +5,7 @@ const complaintSchema = new Schema<IComplaint>(
   {
     createdBy: {
       type: Schema.Types.ObjectId,
-      ref: "User", // <--- added this
+      ref: "User",
       required: true,
     },
     tenant: { type: Schema.Types.ObjectId, ref: "Tenant" },
