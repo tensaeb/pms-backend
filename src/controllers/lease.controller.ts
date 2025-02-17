@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import express, { Request, Response } from "express";
 import { errorResponse, successResponse } from "../utils/apiResponse";
 import { leaseService } from "../services/lease.services";
 import { User } from "../models/user.model";
@@ -164,6 +164,32 @@ class LeaseController {
       res
         .status(500)
         .json(errorResponse(error.message, "Failed to fetch leases"));
+    }
+  }
+  // NEW METHOD: Get lease status counts by registeredBy
+  public async getLeaseStatusCounts(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredBy } = req.params;
+      const statusCounts =
+        await leaseService.getLeaseStatusCountsByRegisteredBy(registeredBy);
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            statusCounts,
+            "Lease status counts fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(error.message, "Failed to fetch lease status counts")
+        );
     }
   }
 }

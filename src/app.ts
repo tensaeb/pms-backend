@@ -4,6 +4,9 @@ import router from "./routes";
 import cors from "cors";
 import path from "path";
 import { connectDB } from "./config/db";
+// Import the scheduler
+import "./schedulers/leaseScheduler"; // <---- Import and execute scheduler
+// import { startLeaseScheduler } from './schedulers/leaseScheduler';
 
 class App {
   public app: Application;
@@ -38,6 +41,10 @@ class App {
 
   public async connectDatabase(): Promise<void> {
     await connectDB();
+
+    // START THE SCHEDULER HERE RIGHT AFTER CONNECTION ESTABLISHED
+    console.log("starting scheduler");
+    require("./schedulers/leaseScheduler");
   }
 
   private middlewares(): void {

@@ -69,6 +69,12 @@ router.get(
   authenticate,
   tenantController.getTenantsByUserAdmin
 );
+// NEW ROUTE: Get tenant status counts by registeredByAdmin
+router.get(
+  "/statusCounts/:registeredByAdmin",
+  authenticate,
+  tenantController.getTenantStatusCounts
+);
 
 // UPDATE tenant by ID
 router.put("/:id", admin, upload, tenantController.updateTenant);

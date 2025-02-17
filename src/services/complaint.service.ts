@@ -415,6 +415,98 @@ class ComplaintService {
       throw error;
     }
   }
+  // *** MODIFIED METHOD ***
+  public async getComplaintsByRegisteredByAdmin(
+    registeredByAdmin: string,
+    query: any
+  ): Promise<{
+    complaints: Partial<IComplaint>[];
+    totalPages: number;
+    currentPage: number;
+    totalComplaints: number;
+  }> {
+    try {
+      const { page = 1, limit = 10, search = "", status } = query;
+      const parsedLimit = Number(limit); // Ensure limit is a number
+      const skip = (page - 1) * parsedLimit;
+
+      // First, find all users registered by this admin
+      const registeredUsers = await User.find({
+        registeredByAdmin: new Types.ObjectId(registeredByAdmin),
+      });
+      const registeredUserIds = registeredUsers.map((user) => user._id);
+
+      console.log(`Registered users: ${registeredUserIds}`);
+
+      // If no users are registered by the admin, return empty
+      if (registeredUserIds.length === 0) {
+        logger.info(
+          `No users registered by admin ${registeredByAdmin}. Returning empty results.`
+        );
+        return {
+          complaints: [],
+          totalPages: 0,
+          currentPage: Number(page),
+          totalComplaints: 0,
+        };
+      }
+
+      // Build the search query
+      let searchQuery: any = {
+        createdBy: { $in: registeredUserIds }, // Convert to strings
+      };
+
+      if (search) {
+        searchQuery.$or = [
+          { "property.name": { $regex: search, $options: "i" } },
+          { complaintType: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      if (status) {
+        searchQuery.status = status;
+      }
+
+      console.log("Final searchQuery:", JSON.stringify(searchQuery, null, 2));
+
+      // Fetch complaints with populated data
+      const complaints = await Complaint.find(searchQuery)
+        .populate("property")
+        .populate({
+          path: "createdBy",
+          populate: {
+            path: "registeredBy",
+          },
+        })
+        .skip(skip)
+        .limit(parsedLimit);
+
+      console.log(
+        "Complaints with populated data:",
+        JSON.stringify(complaints, null, 2)
+      );
+
+      // Count total complaints
+      const totalComplaints = await Complaint.countDocuments(searchQuery);
+
+      logger.info(
+        `Retrieved complaints for tenants registered by admin ${registeredByAdmin} (page ${page}, limit ${limit}, search "${search}", status "${status}"). Total complaints: ${totalComplaints}`
+      );
+
+      return {
+        complaints,
+        totalPages: Math.ceil(totalComplaints / parsedLimit),
+        currentPage: Number(page),
+        totalComplaints,
+      };
+    } catch (error) {
+      logger.error(
+        `Error getting complaints for tenants registered by admin ${registeredByAdmin}: ${error}`
+      );
+      throw error;
+    }
+  }
 }
 
 export const complaintService = new ComplaintService();

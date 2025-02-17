@@ -490,5 +490,57 @@ class TenantService {
       throw error;
     }
   }
+
+  // NEW METHOD: Get tenant status counts by registeredByAdmin, ensuring all statuses are present
+  public async getTenantStatusCountsByRegisteredByAdmin(
+    registeredByAdmin: string
+  ): Promise<{ [status: string]: number }> {
+    try {
+      const { ObjectId } = mongoose.Types;
+      const aggregationResult = await Tenant.aggregate([
+        {
+          $match: {
+            registeredByAdmin: new ObjectId(registeredByAdmin),
+          },
+        },
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            status: "$_id",
+            count: 1,
+          },
+        },
+      ]);
+
+      // Initialize status counts with default values of 0
+      const statusCounts: { [status: string]: number } = {
+        active: 0,
+        inactive: 0,
+        pending: 0,
+      };
+
+      // Update counts with the aggregation result
+      aggregationResult.forEach((item) => {
+        statusCounts[item.status] = item.count;
+      });
+
+      logger.info(
+        `Retrieved tenant status counts for registeredByAdmin: ${registeredByAdmin}`
+      );
+
+      return statusCounts;
+    } catch (error: any) {
+      logger.error(
+        `Error getting tenant status counts by registeredByAdmin: ${error}`
+      );
+      throw error;
+    }
+  }
 }
 export const tenantService = new TenantService();

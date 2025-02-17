@@ -265,12 +265,14 @@ class PropertyService {
         `Retrieved ${properties.length} properties (page ${page}, limit ${limit}, search "${search}", propertyType "${propertyType}"). Total properties: ${totalProperties}`
       );
 
+      const numberOfProperties = properties.length; // Define here
+
       return {
         properties,
         totalPages: Math.ceil(totalProperties / limit),
         currentPage: Number(page),
         totalProperties,
-        numberOfProperties: properties.length,
+        numberOfProperties,
       };
     } catch (error) {
       logger.error(`Error getting all properties: ${error}`);
@@ -418,12 +420,14 @@ class PropertyService {
         `Retrieved ${properties.length} properties for user ${userId} (page ${page}, limit ${limit}, search "${search}"). Total properties: ${totalProperties}`
       );
 
+      const numberOfProperties = properties.length; // Define here
+
       return {
         properties,
         totalPages: Math.ceil(totalProperties / limit),
         currentPage: Number(page),
         totalProperties,
-        numberOfProperties: properties.length,
+        numberOfProperties,
       };
     } catch (error) {
       logger.error(`Error getting properties by user ID ${userId}: ${error}`);
@@ -496,7 +500,7 @@ class PropertyService {
       );
 
       const totalPages = Math.ceil(totalProperties / Number(limit));
-      const numberOfProperties = properties.length;
+      const numberOfProperties = properties.length; // Define here
 
       logger.info(
         `Returning properties (page ${page}, limit ${limit}): ${numberOfProperties} properties, total pages: ${totalPages}`
@@ -575,12 +579,14 @@ class PropertyService {
         `Retrieved ${properties.length} properties with status "${status}" (page ${page}, limit ${limit}, search "${search}"). Total properties: ${totalProperties}`
       );
 
+      const numberOfProperties = properties.length; // Define here
+
       return {
         properties,
         totalPages: Math.ceil(totalProperties / limit),
         currentPage: Number(page),
         totalProperties,
-        numberOfProperties: properties.length,
+        numberOfProperties,
       };
     } catch (error) {
       logger.error(`Error getting properties by status ${status}: ${error}`);
@@ -618,12 +624,14 @@ class PropertyService {
         `Retrieved ${properties.length} properties with propertyType "${propertyType}" (page ${page}, limit ${limit}, search "${search}"). Total properties: ${totalProperties}`
       );
 
+      const numberOfProperties = properties.length; // Define here
+
       return {
         properties,
         totalPages: Math.ceil(totalProperties / limit),
         currentPage: Number(page),
         totalProperties,
-        numberOfProperties: properties.length,
+        numberOfProperties,
       };
     } catch (error) {
       logger.error(
@@ -768,7 +776,7 @@ class PropertyService {
       );
 
       const totalPages = Math.ceil(totalProperties / Number(limit));
-      const numberOfProperties = properties.length;
+      const numberOfProperties = properties.length; // Define here
 
       logger.info(
         `Returning properties (page ${page}, limit ${limit}): ${numberOfProperties} properties, total pages: ${totalPages}`
@@ -785,6 +793,62 @@ class PropertyService {
       logger.error(
         `Error in getOpenPropertiesByUserAdminID: ${error.message}`,
         error
+      );
+      throw error;
+    }
+  }
+
+  // NEW METHOD: Get property status counts by registeredBy
+  public async getPropertyStatusCountsByRegisteredBy(
+    registeredBy: string
+  ): Promise<{ [status: string]: number }> {
+    try {
+      const { ObjectId } = mongoose.Types;
+
+      const aggregationResult = await Property.aggregate([
+        {
+          $lookup: {
+            from: "users",
+            localField: "userCreated",
+            foreignField: "_id",
+            as: "userCreated",
+          },
+        },
+        { $unwind: "$userCreated" },
+        {
+          $match: {
+            "userCreated.registeredBy": new ObjectId(registeredBy),
+          },
+        },
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            status: "$_id",
+            count: 1,
+          },
+        },
+      ]);
+
+      // Format the result as a key-value pair (status: count)
+      const statusCounts: { [status: string]: number } = {};
+      aggregationResult.forEach((item) => {
+        statusCounts[item.status] = item.count;
+      });
+
+      logger.info(
+        `Retrieved property status counts for registeredBy: ${registeredBy}`
+      );
+
+      return statusCounts;
+    } catch (error: any) {
+      logger.error(
+        `Error getting property status counts by registeredBy: ${error}`
       );
       throw error;
     }

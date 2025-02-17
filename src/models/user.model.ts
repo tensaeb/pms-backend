@@ -29,7 +29,14 @@ const userSchema = new Schema<IUser>(
     },
     resetCode: { type: String },
     resetCodeExpiration: { type: Date },
-    activeStart: { type: Date, default: Date.now }, // Set default to now, to auto make created time.
+    activeStart: {
+      type: Date,
+      default: () => {
+        const active = new Date();
+        active.setMinutes(active.getMinutes() + 30);
+        return active;
+      },
+    }, // Set default to now, to auto make created time.
     activeEnd: {
       type: Date,
       default: () => {

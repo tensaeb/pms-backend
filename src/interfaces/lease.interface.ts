@@ -4,9 +4,9 @@ import { IProperty } from "./property.interface";
 import { IUser } from "./user.interface";
 
 export interface ILease extends Document {
-  user: Types.ObjectId | IUser;
-  tenant: Types.ObjectId | ITenant;
-  property: Types.ObjectId | IProperty;
+  user: Types.ObjectId | IUser | string;
+  tenant: Types.ObjectId | ITenant | string;
+  property: Types.ObjectId | IProperty | string;
   leaseStart: Date;
   leaseEnd: Date;
   rentAmount: number;
@@ -19,6 +19,7 @@ export interface ILease extends Document {
   additionalOccupants?: string[];
   utilitiesAndServices?: string;
   documents?: string[];
+  status: "active" | "expired" | "pending" | "terminated";
   createdAt?: Date;
   updatedAt?: Date;
 }

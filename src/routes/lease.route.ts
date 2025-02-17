@@ -41,6 +41,13 @@ router.get(
   leaseController.getLeasesByRegisteredBy
 );
 
+// NEW ROUTE: Get lease status counts by registeredBy
+router.get(
+  "/statusCounts/:registeredBy",
+  authenticate,
+  leaseController.getLeaseStatusCounts
+);
+
 // UPDATE lease by ID
 router.put("/:id", admin, upload, leaseController.updateLease);
 

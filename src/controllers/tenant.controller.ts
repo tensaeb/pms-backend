@@ -173,6 +173,34 @@ class TenantController {
         );
     }
   }
+  // NEW METHOD: Get tenant status counts by registeredByAdmin
+  public async getTenantStatusCounts(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredByAdmin } = req.params;
+      const statusCounts =
+        await tenantService.getTenantStatusCountsByRegisteredByAdmin(
+          registeredByAdmin
+        );
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            statusCounts,
+            "Tenant status counts fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(error.message, "Failed to fetch tenant status counts")
+        );
+    }
+  }
 }
 
 export const tenantController = new TenantController();

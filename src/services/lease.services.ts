@@ -6,9 +6,11 @@ import { Parser } from "json2csv";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { ITenant } from "../interfaces/tenant.interface";
 import { IProperty } from "../interfaces/property.interface";
+import { Tenant } from "../models/tenant.model";
 import { User } from "../models/user.model";
 import { propertyService } from "./property.services";
 import logger from "../utils/logger"; // Import logger
+import mongoose from "mongoose";
 
 class LeaseService {
   private readonly UPLOAD_DIR = path.join(process.cwd(), "uploads", "lease");
@@ -58,14 +60,22 @@ class LeaseService {
     files?: Express.Multer.File[],
     user?: string | undefined
   ): Promise<ILease> {
-    const { property } = leaseData;
+    const { property, tenant, leaseStart, leaseEnd } = leaseData;
 
     try {
       if (!property) {
         throw new Error("Property Id is required");
       }
+      if (!leaseStart || !leaseEnd) {
+        throw new Error("leaseStart and leaseEnd dates are required");
+      }
 
       const newLease = new Lease({ ...leaseData, user: user });
+
+      //Determine lease status based on dates
+      if (newLease.leaseEnd < new Date()) {
+        newLease.status = "expired";
+      }
       let savedLease;
 
       try {
@@ -84,6 +94,9 @@ class LeaseService {
           property.toString(),
           "reserved"
         );
+        // Update tenant status to 'active'
+        await Tenant.findByIdAndUpdate(tenant, { status: "active" });
+
         logger.info(`Lease created with ID: ${savedLease._id}`);
         return savedLease;
       } catch (error) {
@@ -170,6 +183,22 @@ class LeaseService {
     files?: Express.Multer.File[]
   ) {
     try {
+      const lease = await Lease.findById(id);
+
+      if (!lease) {
+        logger.warn(`Lease with ID ${id} not found for update.`);
+        throw new Error("Lease not found");
+      }
+      //Check the lease status
+      if (updateData.leaseEnd) {
+        lease.leaseEnd = updateData.leaseEnd;
+      }
+
+      if (lease.leaseEnd < new Date()) {
+        lease.status = "expired";
+        //Also, update tenant status to inactive
+        await Tenant.findByIdAndUpdate(lease.tenant, { status: "inactive" });
+      }
       if (files && files.length > 0) {
         updateData.documents = files.map((file) => file.filename);
       }
@@ -381,6 +410,102 @@ class LeaseService {
       logger.error(
         `Error getting leases registered by ${registeredBy}: ${error}`
       );
+      throw error;
+    }
+  }
+
+  // NEW METHOD: Get lease status counts by registeredBy
+  public async getLeaseStatusCountsByRegisteredBy(
+    registeredBy: string
+  ): Promise<{ [status: string]: number }> {
+    try {
+      const { ObjectId } = mongoose.Types;
+
+      // First find all users registered by this ID
+      const registeredUsers = await User.find({ registeredBy: registeredBy });
+      const registeredUserIds = registeredUsers.map((user) => user._id);
+
+      const aggregationResult = await Lease.aggregate([
+        {
+          $match: {
+            user: { $in: registeredUserIds },
+          },
+        },
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            status: "$_id",
+            count: 1,
+          },
+        },
+      ]);
+
+      // Initialize status counts with default values of 0
+      const statusCounts: { [status: string]: number } = {
+        active: 0,
+        expired: 0,
+        pending: 0,
+        terminated: 0,
+      };
+
+      // Update counts with the aggregation result
+      aggregationResult.forEach((item) => {
+        statusCounts[item.status] = item.count;
+      });
+
+      logger.info(
+        `Retrieved lease status counts for registeredBy: ${registeredBy}`
+      );
+
+      return statusCounts;
+    } catch (error: any) {
+      logger.error(
+        `Error getting lease status counts by registeredBy: ${error}`
+      );
+      throw error;
+    }
+  }
+  // NEW METHOD: Function to update statuses based on lease dates
+  public async updateLeaseAndTenantStatuses(): Promise<void> {
+    try {
+      const now = new Date();
+      const leases = await Lease.find({
+        leaseEnd: { $lte: now },
+        status: { $ne: "expired" }, // Only expired the active lease
+      }).populate("tenant"); // Ensure tenant is populated
+
+      for (const lease of leases) {
+        // Update lease status to "expired"
+        lease.status = "expired";
+        await lease.save();
+
+        // Update tenant status to "inactive"
+        if (
+          lease.tenant &&
+          typeof lease.tenant !== "string" &&
+          (lease.tenant as ITenant)._id
+        ) {
+          await Tenant.findByIdAndUpdate((lease.tenant as ITenant)._id, {
+            status: "inactive",
+          });
+          logger.info(
+            `Tenant status updated to inactive for tenant ID ${
+              (lease.tenant as ITenant)._id
+            }`
+          );
+        }
+        logger.info(
+          `Lease status updated to expired for lease ID ${lease._id}`
+        );
+      }
+    } catch (error) {
+      logger.error(`Error updating lease and tenant statuses: ${error}`);
       throw error;
     }
   }

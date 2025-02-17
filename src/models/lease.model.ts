@@ -18,6 +18,11 @@ const leaseSchema = new Schema<ILease>(
     additionalOccupants: { type: [String] },
     utilitiesAndServices: { type: String },
     documents: { type: [String] },
+    status: {
+      type: String,
+      enum: ["active", "expired", "pending", "terminated"],
+      default: "active", // Or "pending", depending on your initial state
+    },
   },
   { timestamps: true }
 );

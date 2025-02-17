@@ -1,3 +1,5 @@
+// complaint.controller.ts
+
 import { Request, Response } from "express";
 import { errorResponse, successResponse } from "../utils/apiResponse";
 import { complaintService } from "../services/complaint.service";
@@ -234,6 +236,37 @@ class ComplaintController {
           errorResponse(
             error.message,
             "Failed to fetch complaints for the tenant"
+          )
+        );
+    }
+  }
+  // *** ADD THIS METHOD ***
+  public async getComplaintsByRegisteredByAdmin(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredByAdmin } = req.params;
+      const complaints =
+        await complaintService.getComplaintsByRegisteredByAdmin(
+          registeredByAdmin,
+          req.query
+        );
+      res
+        .status(200)
+        .json(
+          successResponse(
+            complaints,
+            "Complaints for users registered by the admin fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch complaints for users registered by the admin"
           )
         );
     }

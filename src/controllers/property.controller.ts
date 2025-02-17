@@ -351,5 +351,34 @@ class PropertyController {
         .json(errorResponse(error.message, "Failed to fetch open properties"));
     }
   }
+
+  // NEW METHOD: Get property status counts by registeredBy
+  public async getPropertyStatusCounts(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredBy } = req.params;
+      const statusCounts =
+        await propertyService.getPropertyStatusCountsByRegisteredBy(
+          registeredBy
+        );
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            statusCounts,
+            "Property status counts fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(error.message, "Failed to fetch property status counts")
+        );
+    }
+  }
 }
 export const propertyController = new PropertyController();

@@ -115,4 +115,11 @@ router.delete(
   propertyController.deletePhoto
 );
 
+// NEW ROUTE: Get property status counts by registeredBy
+router.get(
+  "/statusCounts/:registeredBy",
+  authenticate,
+  propertyController.getPropertyStatusCounts
+);
+
 export default router;
