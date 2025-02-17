@@ -10,7 +10,7 @@ import { propertyService } from "../services/property.services";
 import { PropertyStatus, isPropertyStatus } from "../utils/typeCheckers";
 import { Property } from "../models/property.model";
 import logger from "../utils/logger"; // Import logger
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 
 class MaintenanceService {
   private readonly UPLOAD_DIR = path.join(
@@ -873,6 +873,106 @@ class MaintenanceService {
     } catch (error) {
       logger.error(
         `Error getting maintenance requests created by users registered by admin ${registeredByAdmin}: ${error}`
+      );
+      throw error;
+    }
+  }
+
+  // NEW METHOD: Get maintenance status counts by registeredBy with date range
+  public async getMaintenanceStatusCountsByRegisteredBy(
+    registeredBy: string
+  ): Promise<{
+    statusCounts: { [status: string]: number };
+    scheduledFromNow: number;
+    scheduledThisWeek: number;
+    scheduledThisMonth: number;
+    scheduledThisYear: number;
+  }> {
+    try {
+      const { ObjectId } = mongoose.Types;
+      // First, find all users registered by this ID
+      const registeredUsers = await User.find({ registeredBy: registeredBy });
+      const registeredUserIds = registeredUsers.map((user) => user._id);
+
+      const statusCounts: { [status: string]: number } = {
+        Pending: 0,
+        Approved: 0,
+        "In Progress": 0,
+        Completed: 0,
+        Cancelled: 0,
+        Inspected: 0,
+        Incomplete: 0,
+      };
+
+      //Base match query
+      const baseMatchQuery = {
+        tenant: { $in: registeredUserIds },
+      };
+
+      const aggregationResult = await Maintenance.aggregate([
+        {
+          $match: baseMatchQuery,
+        },
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            status: "$_id",
+            count: 1,
+          },
+        },
+      ]);
+      aggregationResult.forEach((item) => {
+        statusCounts[item.status] = item.count;
+      });
+
+      // Function to build the date range match query for scheduledDate
+      const buildDateRangeMatchQuery = (startDate: Date): any => ({
+        ...baseMatchQuery,
+        scheduledDate: { $gte: startDate },
+      });
+
+      const now = new Date();
+      const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay())); // Start of the week (Sunday)
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1); // Start of the month
+      const startOfYear = new Date(now.getFullYear(), 0, 1); // Start of the year
+
+      // Count of scheduled maintenance requests from now
+      const scheduledFromNow = await Maintenance.countDocuments(
+        buildDateRangeMatchQuery(new Date())
+      );
+      // Count of scheduled maintenance requests this week
+      const scheduledThisWeek = await Maintenance.countDocuments(
+        buildDateRangeMatchQuery(startOfWeek)
+      );
+      // Count of scheduled maintenance requests this month
+      const scheduledThisMonth = await Maintenance.countDocuments(
+        buildDateRangeMatchQuery(startOfMonth)
+      );
+      // Count of scheduled maintenance requests this year
+      const scheduledThisYear = await Maintenance.countDocuments(
+        buildDateRangeMatchQuery(startOfYear)
+      );
+
+      logger.info(
+        `Retrieved maintenance status counts and schedule counts for registeredBy: ${registeredBy}`
+      );
+
+      return {
+        statusCounts,
+        scheduledFromNow,
+        scheduledThisWeek,
+        scheduledThisMonth,
+        scheduledThisYear,
+      };
+    } catch (error: any) {
+      logger.error(
+        `Error getting maintenance status counts by registeredBy: ${error}`
       );
       throw error;
     }

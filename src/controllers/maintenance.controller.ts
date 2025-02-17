@@ -535,6 +535,38 @@ class MaintenanceController {
         );
     }
   }
+
+  // NEW METHOD: Get maintenance status counts by registeredBy
+  public async getMaintenanceStatusCounts(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredBy } = req.params;
+      const statusCounts =
+        await maintenanceService.getMaintenanceStatusCountsByRegisteredBy(
+          registeredBy
+        );
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            statusCounts,
+            "Maintenance status counts fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch maintenance status counts"
+          )
+        );
+    }
+  }
 }
 
 export const maintenanceController = new MaintenanceController();

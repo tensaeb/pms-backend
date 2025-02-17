@@ -98,29 +98,35 @@ router.put(
 );
 
 // Delete a maintenance request
-router.delete("/:id", maintenanceController.deleteMaintenance);
+router.delete("/:id", admin, maintenanceController.deleteMaintenance);
 
 router.get(
   "/registered/:userId",
   maintenanceController.getMaintenanceRequestsByRegisteredUser
 );
 
-// *** ADD THIS ROUTE ***
+// *** REMAINING FROM PREVIOUS ANSWER ***
+
 router.get(
   "/tenant/:tenantId",
   maintenanceController.getMaintenancesByTenantId
 );
 
-// *** ADD THIS ROUTE ***
 router.get(
   "/assigned/:assignedMaintainer",
   maintenanceController.getMaintenancesByAssignedMaintainer
 );
 
-// *** ADD THIS ROUTE ***
 router.get(
   "/registered-by-admin/:registeredByAdmin",
   maintenanceController.getMaintenancesByRegisteredByAdmin
+);
+
+// NEW ROUTE: Get maintenance status counts by registeredBy
+router.get(
+  "/statusCounts/:registeredBy",
+  authenticate,
+  maintenanceController.getMaintenanceStatusCounts
 );
 
 // Serve static files from the 'uploads' directory

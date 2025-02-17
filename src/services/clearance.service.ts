@@ -8,6 +8,7 @@ import path from "path";
 import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import mongoose from "mongoose";
+import { User } from "../models/user.model";
 
 interface ImageOptions {
   fit: [number, number];
@@ -667,6 +668,114 @@ class ClearanceService {
     } catch (error) {
       logger.error(
         `ClearanceService: getClearancesByTenantId failed for tenantId: ${tenantId}, ${error}`
+      );
+      throw error;
+    }
+  }
+  //NEW METHOD
+  //Get count for statuses by registered By Admin
+  public async getClearanceStatusCountsByRegisteredBy(
+    registeredBy: string
+  ): Promise<{
+    clearanceStatusCounts: { [status: string]: number };
+    inspectionStatusCounts: { [status: string]: number };
+  }> {
+    try {
+      const { ObjectId } = mongoose.Types;
+
+      // Find all users registered by this ID
+      const registeredUsers = await User.find({ registeredBy: registeredBy });
+      const registeredUserIds = registeredUsers.map((user) => user._id);
+
+      // First, let’s create our base objects for the expected results so that even the empty results will be showing correctly.
+      const clearanceStatusCounts: { [status: string]: number } = {
+        Pending: 0,
+        Approved: 0,
+        Rejected: 0,
+      };
+
+      const inspectionStatusCounts: { [status: string]: number } = {
+        Pending: 0,
+        Passed: 0,
+        Failed: 0,
+      };
+
+      const aggregationResult = await Clearance.aggregate([
+        {
+          $lookup: {
+            from: "users",
+            localField: "tenant",
+            foreignField: "_id",
+            as: "tenantInfo",
+          },
+        },
+        {
+          $unwind: "$tenantInfo",
+        },
+        {
+          $match: {
+            "tenantInfo.registeredBy": new ObjectId(registeredBy),
+          },
+        },
+        {
+          $facet: {
+            statusCounts: [
+              {
+                $group: {
+                  _id: "$status",
+                  count: { $sum: 1 },
+                },
+              },
+              {
+                $project: {
+                  status: "$_id",
+                  count: 1,
+                  _id: 0,
+                },
+              },
+            ],
+            inspectionCounts: [
+              {
+                $group: {
+                  _id: "$inspectionStatus",
+                  count: { $sum: 1 },
+                },
+              },
+              {
+                $project: {
+                  status: "$_id",
+                  count: 1,
+                  _id: 0,
+                },
+              },
+            ],
+          },
+        },
+      ]);
+
+      const statusCountsArray = aggregationResult[0]?.statusCounts || [];
+      const inspectionCountsArray =
+        aggregationResult[0]?.inspectionCounts || [];
+
+      statusCountsArray.forEach((item: any) => {
+        clearanceStatusCounts[item.status] = item.count;
+      });
+
+      inspectionCountsArray.forEach((item: any) => {
+        inspectionStatusCounts[item.status] = item.count;
+      });
+
+      logger.info(
+        `Retrieved clearance and inspection status counts for registeredBy: ${registeredBy}`
+      );
+
+      return {
+        clearanceStatusCounts,
+        inspectionStatusCounts,
+      };
+    } catch (error: any) {
+      logger.error(
+        `Error getting clearance and inspection status counts by registeredBy: ${error}`
       );
       throw error;
     }

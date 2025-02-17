@@ -242,7 +242,7 @@ class ClearanceController {
         );
     }
   }
-  // *** ADD THIS METHOD ***
+  // *** REMAINS FROM PREVIOUS STEPS ***
   public async getClearancesByTenantId(
     req: Request,
     res: Response
@@ -273,8 +273,38 @@ class ClearanceController {
         );
     }
   }
+  // NEW METHOD: Get clearance status counts by registeredBy
+  public async getClearanceStatusCounts(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredBy } = req.params;
+      const { clearanceStatusCounts, inspectionStatusCounts } =
+        await clearanceService.getClearanceStatusCountsByRegisteredBy(
+          registeredBy
+        );
 
-  // *** ADD THIS METHOD ***
+      res
+        .status(200)
+        .json(
+          successResponse(
+            { clearanceStatusCounts, inspectionStatusCounts },
+            "Clearance and inspection status counts fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch clearance and inspection status counts"
+          )
+        );
+    }
+  }
+  // *** REMAINS FROM PREVIOUS STEPS ***
   public async getClearancesByRegisteredBy(
     req: Request,
     res: Response
@@ -295,21 +325,14 @@ class ClearanceController {
           )
         );
     } catch (error: any) {
-      if (error instanceof mongoose.Error.ValidationError) {
-        // Handle Mongoose validation errors (e.g., invalid ObjectId)
-        res
-          .status(400)
-          .json(errorResponse(error.message, "Invalid Input Parameters"));
-      } else {
-        res
-          .status(500)
-          .json(
-            errorResponse(
-              error.message,
-              "Failed to fetch clearance requests for the registeredBy"
-            )
-          );
-      }
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch clearance requests for the registeredBy"
+          )
+        );
     }
   }
 }

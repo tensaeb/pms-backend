@@ -23,13 +23,16 @@ router.get(
   admin,
   clearanceController.getUninspectedClearances
 );
-// *** ADD THIS ROUTE ***
+
 router.get(
   "/registeredBy/:registeredBy",
   clearanceController.getClearancesByRegisteredBy
 );
+router.get(
+  "/statusCounts/:registeredBy",
+  clearanceController.getClearanceStatusCounts
+);
 
-// *** ADD THIS ROUTE ***
 router.get("/tenant/:tenantId", clearanceController.getClearancesByTenantId);
 
 export default router;
