@@ -79,6 +79,10 @@ router.get(
   authenticate,
   propertyController.getPropertiesByType
 );
+router.get(
+  "/leased/user/:userId",
+  propertyController.getLeasedPropertiesByUser
+);
 // Update a property by ID
 router.put(
   "/:id",

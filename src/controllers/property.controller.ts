@@ -380,5 +380,37 @@ class PropertyController {
         );
     }
   }
+  public async getLeasedPropertiesByUser(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const query = req.query;
+
+      const result = await propertyService.getLeasedPropertiesByUser(
+        userId,
+        query
+      );
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            result,
+            "Leased properties fetched successfully for the user"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch leased properties for the user"
+          )
+        );
+    }
+  }
 }
 export const propertyController = new PropertyController();

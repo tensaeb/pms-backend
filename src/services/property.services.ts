@@ -15,6 +15,8 @@ import { PropertyStatus, isPropertyStatus } from "../utils/typeCheckers";
 import * as XLSX from "xlsx";
 import logger from "../utils/logger";
 import mongoose from "mongoose";
+import { Tenant } from "../models/tenant.model";
+import { Lease } from "../models/lease.model";
 
 class PropertyService {
   private readonly parser = new Parser();
@@ -850,6 +852,91 @@ class PropertyService {
       logger.error(
         `Error getting property status counts by registeredBy: ${error}`
       );
+      throw error;
+    }
+  }
+
+  public async getLeasedPropertiesByUser(
+    userId: string,
+    query: any // For pagination/filtering
+  ): Promise<{
+    properties: Partial<IProperty>[];
+    totalPages: number;
+    currentPage: number;
+    totalProperties: number;
+  }> {
+    try {
+      const { page = 1, limit = 10, search = "" } = query;
+      const limitNumber = Number(limit) || 10;
+      const skip = (page - 1) * limitNumber;
+
+      // 1. Validate the userId
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        logger.warn(`Invalid userId provided.`);
+        return {
+          properties: [],
+          totalPages: 0,
+          currentPage: Number(page),
+          totalProperties: 0,
+        };
+      }
+
+      // 2. Find the Tenant associated with the user ID
+      const tenant = await Tenant.findOne({ user: userId }).lean();
+
+      if (!tenant) {
+        logger.info(`No tenant found for user ID ${userId}.`);
+        return {
+          properties: [],
+          totalPages: 0,
+          currentPage: Number(page),
+          totalProperties: 0,
+        };
+      }
+
+      // 3. Find all leases associated with the tenant
+      const leases = await Lease.find({ tenant: tenant._id }).lean();
+
+      // 4. Extract the property IDs from the leases
+      const propertyIds = leases.map((lease) => lease.property);
+
+      if (propertyIds.length === 0) {
+        logger.info(`No leases found for tenant ${tenant._id}.`);
+        return {
+          properties: [],
+          totalPages: 0,
+          currentPage: Number(page),
+          totalProperties: 0,
+        };
+      }
+
+      // 5. Query the Property model with the extracted property IDs
+      const searchQuery: any = {
+        _id: { $in: propertyIds },
+        $or: [
+          { title: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+          { address: { $regex: search, $options: "i" } },
+        ],
+      };
+
+      const [properties, totalProperties] = await Promise.all([
+        Property.find(searchQuery).skip(skip).limit(limitNumber),
+        Property.countDocuments(searchQuery),
+      ]);
+
+      logger.info(
+        `Retrieved ${properties.length} leased properties for user ${userId} (page ${page}, limit ${limit}, search "${search}"). Total properties: ${totalProperties}`
+      );
+
+      return {
+        properties,
+        totalPages: Math.ceil(totalProperties / limitNumber),
+        currentPage: Number(page),
+        totalProperties,
+      };
+    } catch (error) {
+      logger.error(`Error getting leased properties by user: ${error}`);
       throw error;
     }
   }
