@@ -890,6 +890,87 @@ class ClearanceService {
       throw error;
     }
   }
+
+  public async getClearancesByRegisteredByAdmin(
+    registeredByAdmin: string,
+    query: any
+  ): Promise<{
+    clearances: Partial<IClearance>[];
+    totalPages: number;
+    currentPage: number;
+    totalClearances: number;
+  }> {
+    logger.info(
+      `ClearanceService: getClearancesByRegisteredByAdmin called for registeredByAdmin: ${registeredByAdmin} with query: ${JSON.stringify(
+        query
+      )}`
+    );
+    try {
+      const { page = 1, limit = 10, search = "", status } = query;
+      const limitNumber = Number(limit) || 10;
+      const skip = (page - 1) * limitNumber;
+
+      // Find all users registered by this admin
+      const registeredUsers = await User.find({
+        registeredByAdmin: registeredByAdmin,
+      });
+
+      const registeredUserIds = registeredUsers.map((user) => user._id);
+
+      // If no users are registered by the admin, return empty
+      if (registeredUserIds.length === 0) {
+        logger.info(
+          `No users registered by admin ${registeredByAdmin}. Returning empty results.`
+        );
+        return {
+          clearances: [],
+          totalPages: 0,
+          currentPage: Number(page),
+          totalClearances: 0,
+        };
+      }
+
+      const searchQuery: any = {
+        tenant: { $in: registeredUserIds },
+      };
+
+      if (search) {
+        searchQuery.$or = [
+          { "property.name": { $regex: search, $options: "i" } },
+          { reason: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      if (status) {
+        searchQuery.status = status;
+      }
+
+      const clearances = await Clearance.find(searchQuery)
+        .populate("tenant")
+        .populate("property")
+        .skip(skip)
+        .limit(limitNumber);
+
+      const totalClearances = await Clearance.countDocuments(searchQuery);
+      const totalPages = Math.ceil(totalClearances / limitNumber);
+
+      logger.info(
+        `ClearanceService: getClearancesByRegisteredByAdmin - Fetched ${clearances.length} clearances for registeredByAdmin ${registeredByAdmin}, total: ${totalClearances}`
+      );
+
+      return {
+        clearances,
+        totalPages,
+        currentPage: Number(page),
+        totalClearances,
+      };
+    } catch (error) {
+      logger.error(
+        `ClearanceService: getClearancesByRegisteredByAdmin failed for registeredByAdmin: ${registeredByAdmin}, ${error}`
+      );
+      throw error;
+    }
+  }
 }
 
 export const clearanceService = new ClearanceService();

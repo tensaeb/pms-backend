@@ -432,11 +432,9 @@ class ComplaintService {
 
       // First, find all users registered by this admin
       const registeredUsers = await User.find({
-        registeredByAdmin: new Types.ObjectId(registeredByAdmin),
+        registeredByAdmin: registeredByAdmin,
       });
       const registeredUserIds = registeredUsers.map((user) => user._id);
-
-      console.log(`Registered users: ${registeredUserIds}`);
 
       // If no users are registered by the admin, return empty
       if (registeredUserIds.length === 0) {

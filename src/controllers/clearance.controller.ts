@@ -335,6 +335,37 @@ class ClearanceController {
         );
     }
   }
+  public async getClearancesByRegisteredByAdmin(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredByAdmin } = req.params;
+      const clearances =
+        await clearanceService.getClearancesByRegisteredByAdmin(
+          registeredByAdmin,
+          req.query
+        );
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            clearances,
+            "Clearance requests for the registeredByAdmin fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch clearance requests for the registeredByAdmin"
+          )
+        );
+    }
+  }
 }
 
 export const clearanceController = new ClearanceController();

@@ -1,6 +1,6 @@
-// guest.routes.ts
+// **3. Guest Routes (guest.routes.ts)**
 import express from "express";
-import { authenticate } from "../middlewares/authMiddleware";
+import { authenticate, admin } from "../middlewares/authMiddleware";
 import { guestController } from "../controllers/guest.controller";
 
 const router = express.Router();
@@ -20,6 +20,13 @@ router.get(
   "/registeredBy/:registeredBy",
   authenticate,
   guestController.getGuestsByRegisteredBy
+);
+
+router.get(
+  "/registeredByAdmin/:registeredByAdmin",
+  authenticate,
+  admin,
+  guestController.getGuestsByRegisteredByAdmin
 );
 
 export default router;

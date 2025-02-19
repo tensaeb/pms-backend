@@ -33,6 +33,12 @@ router.get(
   clearanceController.getClearanceStatusCounts
 );
 
+router.get(
+  "/registeredByAdmin/:registeredByAdmin",
+  admin,
+  clearanceController.getClearancesByRegisteredByAdmin
+);
+
 router.get("/tenant/:tenantId", clearanceController.getClearancesByTenantId);
 
 export default router;

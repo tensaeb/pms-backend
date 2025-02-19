@@ -1,4 +1,4 @@
-// guest.service.ts
+// **1. Guest Service (guest.service.ts)**
 import { IGuest } from "../interfaces/guest.interface";
 import { Guest } from "../models/guest.model";
 import { User } from "../models/user.model";
@@ -368,6 +368,81 @@ class GuestService {
       };
     } catch (error) {
       logger.error(`Error getting guests for current user: ${error}`);
+      throw error;
+    }
+  }
+
+  // *** NEW METHOD ***
+  public async getGuestsByRegisteredByAdmin(
+    registeredByAdmin: string,
+    query: any
+  ): Promise<{
+    guests: Partial<IGuest>[];
+    totalPages: number;
+    currentPage: number;
+    totalGuests: number;
+  }> {
+    try {
+      const { page = 1, limit = 10, search = "" } = query;
+      const limitNumber = Number(limit) || 10;
+      const skip = (page - 1) * limitNumber;
+
+      // Find all users registered by this admin
+      const registeredUsers = await User.find({
+        registeredByAdmin: registeredByAdmin,
+      });
+
+      const registeredUserIds = registeredUsers.map((user) => user._id);
+
+      // If no users are registered by the admin, return empty
+      if (registeredUserIds.length === 0) {
+        logger.info(
+          `No users registered by admin ${registeredByAdmin}. Returning empty results.`
+        );
+        return {
+          guests: [],
+          totalPages: 0,
+          currentPage: Number(page),
+          totalGuests: 0,
+        };
+      }
+
+      const searchQuery: any = {
+        user: { $in: registeredUserIds },
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+          { phoneNumber: { $regex: search, $options: "i" } },
+        ],
+      };
+
+      const [guests, totalGuests] = await Promise.all([
+        Guest.find(searchQuery)
+          .populate("user")
+          .populate("property")
+          .skip(skip)
+          .limit(limitNumber),
+        Guest.countDocuments(searchQuery),
+      ]);
+
+      const updatedGuests = await Promise.all(
+        guests.map((guest) => this.updateGuestStatus(guest))
+      );
+
+      logger.info(
+        `Retrieved ${guests.length} guests registered by admin ${registeredByAdmin} (page ${page}, limit ${limit}, search "${search}"). Total guests: ${totalGuests}`
+      );
+
+      return {
+        guests: updatedGuests,
+        totalPages: Math.ceil(totalGuests / limitNumber),
+        currentPage: Number(page),
+        totalGuests,
+      };
+    } catch (error) {
+      logger.error(
+        `Error getting guests registered by admin ${registeredByAdmin}: ${error}`
+      );
       throw error;
     }
   }

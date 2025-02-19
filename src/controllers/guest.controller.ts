@@ -1,4 +1,4 @@
-// guest.controller.ts
+// **2. Guest Controller (guest.controller.ts)**
 import { Request, Response } from "express";
 import { guestService } from "../services/guest.services";
 import { errorResponse, successResponse } from "../utils/apiResponse";
@@ -140,6 +140,40 @@ class GuestController {
           errorResponse(
             error.message,
             "Failed to fetch guests for current user."
+          )
+        );
+    }
+  }
+
+  // *** NEW METHOD ***
+  public async getGuestsByRegisteredByAdmin(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredByAdmin } = req.params;
+      const query = req.query;
+
+      const guests = await guestService.getGuestsByRegisteredByAdmin(
+        registeredByAdmin,
+        query
+      );
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            guests,
+            "Guests fetched successfully by Registered By Admin ID"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch guests by Registered By Admin ID"
           )
         );
     }
