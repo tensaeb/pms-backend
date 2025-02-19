@@ -648,7 +648,9 @@ class UserService {
   async getUserById(id: string) {
     logger.info(`UserService: getUserById called for userId: ${id}`);
     try {
-      const user = await User.findById(id);
+      const user = await User.findById(id)
+        .populate("registeredBy")
+        .populate("registeredByAdmin");
       if (!user) {
         logger.error(`UserService: getUserById - User ${id} not found`);
       }
