@@ -216,9 +216,9 @@ class ComplaintController {
     res: Response
   ): Promise<void> {
     try {
-      const { tenantId } = req.params;
+      const { userId } = req.params;
       const complaints = await complaintService.getComplaintsByCreatedBy(
-        tenantId,
+        userId,
         req.query
       );
       res
