@@ -6,7 +6,7 @@ export interface IClearance extends Document {
   tenant: Types.ObjectId;
   property: Types.ObjectId | IProperty;
   moveOutDate: Date;
-  status: string;
+  status: "Pending" | "Approved" | "Rejected";
   reason: string;
   inspectionStatus: string;
   document?: {

@@ -834,7 +834,7 @@ class MaintenanceService {
       }
 
       const searchQuery: any = {
-        tenant: { $in: registeredUserIds },
+        tenant: registeredUserIds,
       };
       console.log("Search Query: ", searchQuery);
 

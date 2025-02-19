@@ -81,6 +81,10 @@ router.use(
   "/uploads/maintenance",
   express.static(path.join(process.cwd(), "uploads", "maintenance"))
 );
+router.use(
+  "/uploads/clearance",
+  express.static(path.join(process.cwd(), "uploads", "clearance"))
+);
 // API routes
 router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
