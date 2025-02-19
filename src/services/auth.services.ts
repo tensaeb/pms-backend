@@ -23,7 +23,9 @@ class AuthService {
   async loginUser(email: string, password: string) {
     logger.info(`AuthService: loginUser called with email: ${email}`);
     try {
-      const user = await User.findOne({ email });
+      const user = await User.findOne({ email })
+        .populate("registeredBy")
+        .populate("registeredByAdmin");
       if (!user) {
         logger.error(
           `AuthService: loginUser - Invalid credentials for email: ${email} - User not found`
