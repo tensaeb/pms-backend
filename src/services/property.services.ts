@@ -17,6 +17,7 @@ import logger from "../utils/logger";
 import mongoose from "mongoose";
 import { Tenant } from "../models/tenant.model";
 import { Lease } from "../models/lease.model";
+import { User } from "../models/user.model";
 
 class PropertyService {
   private readonly parser = new Parser();
@@ -881,8 +882,24 @@ class PropertyService {
         };
       }
 
-      // 2. Find the Tenant associated with the user ID
-      const tenant = await Tenant.findOne({ user: userId }).lean();
+      const user = await User.findById(userId);
+
+      // Make sure user exist
+      if (!user) {
+        logger.info(`No user found for user ID ${userId}.`);
+        return {
+          properties: [],
+          totalPages: 0,
+          currentPage: Number(page),
+          totalProperties: 0,
+        };
+      }
+      const email = user?.email;
+
+      // 2. Find the Tenant associated with the user email
+      const tenant = await Tenant.findOne({
+        "contactInformation.email": email,
+      }).lean();
 
       if (!tenant) {
         logger.info(`No tenant found for user ID ${userId}.`);
@@ -899,6 +916,8 @@ class PropertyService {
 
       // 4. Extract the property IDs from the leases
       const propertyIds = leases.map((lease) => lease.property);
+
+      console.log(propertyIds);
 
       if (propertyIds.length === 0) {
         logger.info(`No leases found for tenant ${tenant._id}.`);
