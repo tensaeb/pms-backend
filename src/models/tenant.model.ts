@@ -6,19 +6,14 @@ const tenantSchema = new Schema<ITenant>(
     user: { type: Schema.Types.ObjectId, ref: "User" },
     registeredBy: { type: Schema.Types.ObjectId, ref: "User" },
     registeredByAdmin: { type: Schema.Types.ObjectId, ref: "User" },
+    lease: { type: Schema.Types.ObjectId, ref: "Lease" },
     tenantName: { type: String, required: true },
     contactInformation: {
       email: { type: String, required: true, unique: true },
       phoneNumber: { type: String, required: true },
       emergencyContact: { type: String },
     },
-    leaseAgreement: {
-      startDate: { type: Date },
-      endDate: { type: Date },
-      rentAmount: { type: Number },
-      securityDeposit: { type: Number },
-      specialTerms: { type: String },
-    },
+
     status: {
       type: String,
       enum: ["active", "inactive", "pending"],

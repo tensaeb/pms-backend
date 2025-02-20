@@ -12,6 +12,7 @@ import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import sendEmail from "../helpers/mailer";
 import logger from "../utils/logger";
+import { ITenant } from "../interfaces/tenant.interface";
 
 class UserService {
   // Private helper to check for active end and change user status
@@ -645,23 +646,39 @@ class UserService {
     }
   }
   // Get user by ID
-  async getUserById(id: string) {
+  async getUserById(
+    id: string
+  ): Promise<{ user: IUser | null; tenant: ITenant | null }> {
     logger.info(`UserService: getUserById called for userId: ${id}`);
     try {
       const user = await User.findById(id)
         .populate("registeredBy")
-        .populate("registeredByAdmin");
+        .populate("registeredByAdmin"); // Remove .lean()
+
       if (!user) {
         logger.error(`UserService: getUserById - User ${id} not found`);
+        return { user: null, tenant: null }; // Return null for both if user not found
       }
 
-      const updatedUser = await this.checkAndSetUserActiveStatus(user!);
+      let tenant: ITenant | null = null;
+      if (user.role === "Tenant") {
+        tenant = await Tenant.findOne({
+          "contactInformation.email": user.email,
+        })
+          .populate("lease")
+          .lean(); // Keep .lean() here, as we don't need to save this document
+      }
+      const updatedUser = await this.checkAndSetUserActiveStatus(user);
+
       logger.info(
         `UserService: getUserById - Fetched user with ID: ${updatedUser.id}`
       );
-      return updatedUser;
+
+      return { user: updatedUser, tenant: tenant }; // Return both user and tenant
     } catch (error) {
-      logger.error(`UserService: getUserById failed for userId: ${id}`, error);
+      logger.error(
+        `UserService: getUserById - Error fetching user ${id}: ${error}`
+      );
       throw error;
     }
   }

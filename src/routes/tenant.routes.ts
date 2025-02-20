@@ -52,7 +52,7 @@ const uploadSingle = multer({
 router.use(authenticate);
 
 //Generate Report
-router.get("/report", admin, tenantController.generateReport);
+// router.get("/report", admin, tenantController.generateReport);
 
 // Create a tenant
 router.post("/", upload, tenantController.createTenant);

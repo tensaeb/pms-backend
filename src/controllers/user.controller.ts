@@ -302,7 +302,9 @@ class UserController {
 
   async getPhoto(req: Request, res: Response): Promise<void> {
     try {
-      const user = await userService.getUserById(req.params.id);
+      const { id } = req.params;
+      const { user, tenant } = await userService.getUserById(id); // Destructure user and tenant
+
       if (!user || !user.photo) {
         res.status(404).json(errorResponse("Photo not found"));
         return;

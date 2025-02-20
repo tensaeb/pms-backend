@@ -137,6 +137,7 @@ class TenantService {
       const tenants = await Tenant.find(searchQuery)
         .populate("propertyInformation")
         .populate("registeredBy") // Keep this to show the creator of the tenant
+        .populate("lease")
         .skip((page - 1) * limit)
         .limit(Number(limit))
         .lean();
@@ -177,6 +178,7 @@ class TenantService {
       const tenant = await Tenant.findById(id)
         .populate("propertyInformation")
         .populate("registeredBy") // Keep this to show the creator of the tenant
+        .populate("lease")
         .lean();
 
       if (!tenant) {
@@ -340,104 +342,104 @@ class TenantService {
     }
   }
 
-  public async generateReport(
-    startDate: string,
-    endDate: string
-  ): Promise<{ csvPath: string; wordPath: string; tenants: ITenant[] }> {
-    try {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+  // public async generateReport(
+  //   startDate: string,
+  //   endDate: string
+  // ): Promise<{ csvPath: string; wordPath: string; tenants: ITenant[] }> {
+  //   try {
+  //     const start = new Date(startDate);
+  //     const end = new Date(endDate);
 
-      // Fetch tenants within the date range
-      const tenants: ITenant[] = await Tenant.find({
-        createdAt: { $gte: start, $lte: end },
-      }).lean();
+  //     // Fetch tenants within the date range
+  //     const tenants: ITenant[] = await Tenant.find({
+  //       createdAt: { $gte: start, $lte: end },
+  //     }).lean();
 
-      if (!tenants || tenants.length === 0) {
-        logger.warn(
-          `No tenants found for the given date range: ${startDate} - ${endDate}`
-        );
-        throw new Error("No tenants found for the given date range");
-      }
+  //     if (!tenants || tenants.length === 0) {
+  //       logger.warn(
+  //         `No tenants found for the given date range: ${startDate} - ${endDate}`
+  //       );
+  //       throw new Error("No tenants found for the given date range");
+  //     }
 
-      // Ensure that the 'reports' directory exists outside 'src'
-      const reportsDir = path.join(__dirname, "../../reports");
-      if (!fs.existsSync(reportsDir)) {
-        fs.mkdirSync(reportsDir);
-        logger.info(`Created reports directory: ${reportsDir}`);
-      }
+  //     // Ensure that the 'reports' directory exists outside 'src'
+  //     const reportsDir = path.join(__dirname, "../../reports");
+  //     if (!fs.existsSync(reportsDir)) {
+  //       fs.mkdirSync(reportsDir);
+  //       logger.info(`Created reports directory: ${reportsDir}`);
+  //     }
 
-      // Create a timestamp for the report filenames
-      const timestamp = Date.now();
+  //     // Create a timestamp for the report filenames
+  //     const timestamp = Date.now();
 
-      // Prepare data for CSV
-      const cleanedTenants = tenants.map((tenant) => ({
-        tenantName: tenant.tenantName,
-        email: tenant.contactInformation.email,
-        phoneNumber: tenant.contactInformation.phoneNumber,
-        emergencyContact: tenant.contactInformation.emergencyContact || "",
-        startDate: tenant.leaseAgreement.startDate,
-        endDate: tenant.leaseAgreement.endDate,
-        rentAmount: tenant.leaseAgreement.rentAmount,
-        securityDeposit: tenant.leaseAgreement.securityDeposit,
-        propertyId: tenant.propertyInformation.propertyId,
-        moveInDate: tenant.moveInDate,
-      }));
+  //     // Prepare data for CSV
+  //     const cleanedTenants = tenants.map((tenant) => ({
+  //       tenantName: tenant.tenantName,
+  //       email: tenant.contactInformation.email,
+  //       phoneNumber: tenant.contactInformation.phoneNumber,
+  //       emergencyContact: tenant.contactInformation.emergencyContact || "",
+  //       startDate: tenant.leaseAgreement.startDate,
+  //       endDate: tenant.leaseAgreement.endDate,
+  //       rentAmount: tenant.leaseAgreement.rentAmount,
+  //       securityDeposit: tenant.leaseAgreement.securityDeposit,
+  //       propertyId: tenant.propertyInformation.propertyId,
+  //       moveInDate: tenant.moveInDate,
+  //     }));
 
-      const json2csvParser = new Parser();
-      const csv = json2csvParser.parse(cleanedTenants);
+  //     const json2csvParser = new Parser();
+  //     const csv = json2csvParser.parse(cleanedTenants);
 
-      // Write CSV report
-      const csvFilePath = `${reportsDir}/tenants-report-${timestamp}.csv`;
-      fs.writeFileSync(csvFilePath, csv);
-      logger.info(`Generated CSV tenant report: ${csvFilePath}`);
+  //     // Write CSV report
+  //     const csvFilePath = `${reportsDir}/tenants-report-${timestamp}.csv`;
+  //     fs.writeFileSync(csvFilePath, csv);
+  //     logger.info(`Generated CSV tenant report: ${csvFilePath}`);
 
-      // Generate Word report
-      const doc = new Document({
-        sections: [
-          {
-            properties: {},
-            children: cleanedTenants.flatMap((tenant) => [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: `Tenant Name: ${tenant.tenantName}`,
-                    bold: true,
-                  }),
-                ],
-              }),
-              new Paragraph({ text: `Email: ${tenant.email}` }),
-              new Paragraph({ text: `Phone Number: ${tenant.phoneNumber}` }),
-              new Paragraph({
-                text: `Emergency Contact: ${tenant.emergencyContact}`,
-              }),
-              new Paragraph({ text: `Lease Start Date: ${tenant.startDate}` }),
-              new Paragraph({ text: `Lease End Date: ${tenant.endDate}` }),
-              new Paragraph({ text: `Rent Amount: $${tenant.rentAmount}` }),
-              new Paragraph({
-                text: `Security Deposit: $${tenant.securityDeposit}`,
-              }),
-              new Paragraph({ text: `Move-In Date: ${tenant.moveInDate}` }),
-              new Paragraph({
-                children: [new TextRun("\n-------------------------------\n")],
-              }),
-            ]),
-          },
-        ],
-      });
+  //     // Generate Word report
+  //     const doc = new Document({
+  //       sections: [
+  //         {
+  //           properties: {},
+  //           children: cleanedTenants.flatMap((tenant) => [
+  //             new Paragraph({
+  //               children: [
+  //                 new TextRun({
+  //                   text: `Tenant Name: ${tenant.tenantName}`,
+  //                   bold: true,
+  //                 }),
+  //               ],
+  //             }),
+  //             new Paragraph({ text: `Email: ${tenant.email}` }),
+  //             new Paragraph({ text: `Phone Number: ${tenant.phoneNumber}` }),
+  //             new Paragraph({
+  //               text: `Emergency Contact: ${tenant.emergencyContact}`,
+  //             }),
+  //             new Paragraph({ text: `Lease Start Date: ${tenant.startDate}` }),
+  //             new Paragraph({ text: `Lease End Date: ${tenant.endDate}` }),
+  //             new Paragraph({ text: `Rent Amount: $${tenant.rentAmount}` }),
+  //             new Paragraph({
+  //               text: `Security Deposit: $${tenant.securityDeposit}`,
+  //             }),
+  //             new Paragraph({ text: `Move-In Date: ${tenant.moveInDate}` }),
+  //             new Paragraph({
+  //               children: [new TextRun("\n-------------------------------\n")],
+  //             }),
+  //           ]),
+  //         },
+  //       ],
+  //     });
 
-      const wordFilePath = `${reportsDir}/tenants-report-${timestamp}.docx`;
-      const buffer = await Packer.toBuffer(doc);
-      fs.writeFileSync(wordFilePath, buffer);
-      logger.info(`Generated Word tenant report: ${wordFilePath}`);
+  //     const wordFilePath = `${reportsDir}/tenants-report-${timestamp}.docx`;
+  //     const buffer = await Packer.toBuffer(doc);
+  //     fs.writeFileSync(wordFilePath, buffer);
+  //     logger.info(`Generated Word tenant report: ${wordFilePath}`);
 
-      // Return file paths and tenants
-      return { csvPath: csvFilePath, wordPath: wordFilePath, tenants };
-    } catch (error) {
-      logger.error(`Error generating tenant report: ${error}`);
-      throw error;
-    }
-  }
+  //     // Return file paths and tenants
+  //     return { csvPath: csvFilePath, wordPath: wordFilePath, tenants };
+  //   } catch (error) {
+  //     logger.error(`Error generating tenant report: ${error}`);
+  //     throw error;
+  //   }
+  // }
 
   public async getTenantsByUserAdmin(
     registeredByAdmin: string,

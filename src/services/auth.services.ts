@@ -6,6 +6,9 @@ import jwt from "jsonwebtoken";
 import sendEmail from "../helpers/mailer";
 import { User } from "../models/user.model";
 import logger from "../utils/logger";
+import { Tenant } from "../models/tenant.model";
+import { ITenant } from "../interfaces/tenant.interface";
+import { IUser } from "../interfaces/user.interface";
 
 class AuthService {
   private generateToken(user: any, expiresIn: string): string {
@@ -20,12 +23,21 @@ class AuthService {
   }
 
   // Login user
-  async loginUser(email: string, password: string) {
+  async loginUser(
+    email: string,
+    password: string
+  ): Promise<{
+    token: string;
+    refreshToken: string;
+    user: IUser;
+    tenant: ITenant | null;
+  }> {
     logger.info(`AuthService: loginUser called with email: ${email}`);
     try {
       const user = await User.findOne({ email })
         .populate("registeredBy")
         .populate("registeredByAdmin");
+
       if (!user) {
         logger.error(
           `AuthService: loginUser - Invalid credentials for email: ${email} - User not found`
@@ -47,17 +59,31 @@ class AuthService {
         );
         throw new Error("Invalid credentials");
       }
-
-      const token = this.generateToken(user, "24h");
-      const refreshToken = this.generateToken(user, "24h");
+      // token and refreshToken should be defined before used in this syntax
+      const token: string = this.generateToken(user, "24h");
+      const refreshToken: string = this.generateToken(user, "24h");
+      let tenant: ITenant | null = null;
+      if (user.role === "Tenant") {
+        logger.info(
+          `AuthService: loginUser - Attempting to find tenant with email: ${user.email}`
+        ); // Log before query
+        tenant = await Tenant.findOne({
+          "contactInformation.email": user.email,
+        }).lean();
+        logger.info(
+          `AuthService: loginUser - Tenant found: ${JSON.stringify(tenant)}`
+        ); // Log after query
+      }
 
       logger.info(
         `AuthService: loginUser - User logged in successfully email: ${email}`
       );
+
       return {
-        token,
-        refreshToken,
-        user,
+        token: token, // Include token data, with explicit assignment
+        refreshToken: refreshToken, // Include refreshToken data, with explicit assignment
+        user: user.toObject(), // toObject will cast IUser (Document) -> Object
+        tenant, // Include tenant data
       };
     } catch (error) {
       logger.error(`AuthService: loginUser failed for email ${email}`, error);

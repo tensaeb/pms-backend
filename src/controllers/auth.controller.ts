@@ -7,14 +7,17 @@ class AuthController {
   async loginUser(req: Request, res: Response): Promise<void> {
     const { email, password } = req.body;
     try {
-      const { token, refreshToken, user } = await authService.loginUser(
+      const { token, refreshToken, user, tenant } = await authService.loginUser(
         email,
         password
       );
       res
         .status(200)
         .json(
-          successResponse({ token, refreshToken, user }, "Login successful")
+          successResponse(
+            { token, refreshToken, user, tenant },
+            "Login successful"
+          )
         );
     } catch (error: any) {
       res.status(401).json(errorResponse(error.message, "Login failed"));

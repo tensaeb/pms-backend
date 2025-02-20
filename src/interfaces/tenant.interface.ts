@@ -1,10 +1,12 @@
 import { Document, Schema, Types } from "mongoose";
 import { IUser } from "./user.interface";
+import { ILease } from "./lease.interface";
 
 export interface ITenant extends Document {
   user: Types.ObjectId | IUser;
   registeredBy: Types.ObjectId | IUser;
   registeredByAdmin: Types.ObjectId | IUser;
+  lease: Types.ObjectId | ILease;
   tenantName: string;
   contactInformation: {
     email: string;
@@ -12,13 +14,7 @@ export interface ITenant extends Document {
     emergencyContact?: string;
   };
   status: "active" | "inactive" | "pending";
-  leaseAgreement: {
-    startDate: Date;
-    endDate: Date;
-    rentAmount: number;
-    securityDeposit: number;
-    specialTerms?: string;
-  };
+
   propertyInformation: {
     unit?: string;
     propertyId: Schema.Types.ObjectId;

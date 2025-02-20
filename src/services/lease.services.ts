@@ -66,6 +66,9 @@ class LeaseService {
       if (!property) {
         throw new Error("Property Id is required");
       }
+      if (!tenant) {
+        throw new Error("Tenant Id is required");
+      }
       if (!leaseStart || !leaseEnd) {
         throw new Error("leaseStart and leaseEnd dates are required");
       }
@@ -76,7 +79,7 @@ class LeaseService {
       if (newLease.leaseEnd < new Date()) {
         newLease.status = "expired";
       }
-      let savedLease;
+      let savedLease: ILease;
 
       try {
         if (files && files.length > 0) {
@@ -89,18 +92,23 @@ class LeaseService {
         }
         savedLease = await newLease.save();
 
-        // Update property status to 'reserved'
+        //1. Update property status to 'reserved'
         await propertyService.updatePropertyStatus(
           property.toString(),
           "reserved"
         );
-        // Update tenant status to 'active'
-        await Tenant.findByIdAndUpdate(tenant, { status: "active" });
+        //2. Update tenant status to 'active'
+
+        //3. savedLease._id to tenant's lease property
+        await Tenant.findByIdAndUpdate(tenant, {
+          status: "active",
+          lease: savedLease._id,
+        });
 
         logger.info(`Lease created with ID: ${savedLease._id}`);
         return savedLease;
       } catch (error) {
-        // revert status
+        // Revert status
         if (property) {
           await propertyService.updatePropertyStatus(
             property.toString(),
