@@ -152,8 +152,8 @@ class ComplaintService {
             path: "registeredBy",
           },
         })
-        .populate("tenant");
-
+        .populate("tenant")
+        .populate("assignedTo");
       if (!complaint) {
         logger.warn(`Complaint with ID ${id} not found.`);
         return null;
@@ -261,6 +261,7 @@ class ComplaintService {
       const complaints = await Complaint.find({ assignedTo: userId })
         .populate("tenant")
         .populate("property")
+        .populate("assignedTo")
         .populate({
           path: "createdBy",
           populate: {
@@ -283,6 +284,7 @@ class ComplaintService {
       })
         .populate("tenant")
         .populate("property")
+        .populate("assignedTo")
         .populate({
           path: "createdBy",
           populate: {
@@ -330,6 +332,7 @@ class ComplaintService {
       const complaints = await Complaint.find(searchQuery)
         .populate("tenant")
         .populate("property")
+        .populate("assignedTo")
         .populate({
           path: "createdBy",
           populate: {
@@ -389,6 +392,7 @@ class ComplaintService {
       const complaints = await Complaint.find(searchQuery)
         .populate("property")
         .populate("tenant")
+        .populate("assignedTo")
         .populate({
           path: "createdBy",
           populate: {
@@ -477,6 +481,7 @@ class ComplaintService {
             path: "registeredBy",
           },
         })
+        .populate("assignedTo")
         .skip(skip)
         .limit(parsedLimit);
 

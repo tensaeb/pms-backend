@@ -559,6 +559,8 @@ class MaintenanceService {
       const maintenanceRequests = await Maintenance.find(searchQuery)
         .populate("tenant")
         .populate("property")
+        .populate("assignedMaintainer")
+        .populate("inspectedBy")
         .skip((page - 1) * limit)
         .limit(Number(limit));
 
