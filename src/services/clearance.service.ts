@@ -861,6 +861,26 @@ class ClearanceService {
               //Apply pagination and project to remove unwanted fields
               { $skip: (Number(page) - 1) * Number(limitNumber) },
               { $limit: Number(limitNumber) },
+              {
+                $lookup: {
+                  // Populate the tenant field
+                  from: "users",
+                  localField: "tenant",
+                  foreignField: "_id",
+                  as: "tenant",
+                },
+              },
+              { $unwind: "$tenant" }, // Convert tenant array of 1 to 1 object
+              {
+                $lookup: {
+                  // Populate the property field
+                  from: "properties",
+                  localField: "property",
+                  foreignField: "_id",
+                  as: "property",
+                },
+              },
+              { $unwind: "$property" }, // Convert property array of 1 to 1 object
               { $project: { __v: 0, tenantDetails: 0, propertyDetails: 0 } }, // Remove joined results from the properties data output to make it less heavy
             ],
             totalClearances: [{ $count: "count" }], // Gets the count of the documents
