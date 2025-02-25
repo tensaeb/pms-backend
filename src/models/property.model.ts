@@ -15,11 +15,11 @@ const propertySchema = new Schema<IProperty>(
   {
     userCreated: { type: Schema.Types.ObjectId, ref: "User", required: true },
     title: { type: String, required: true },
-    description: { type: String, required: true },
+    description: { type: String },
     address: { type: String, required: true },
     price: { type: Number, required: true },
     rentPrice: { type: Number },
-    numberOfUnits: { type: Number, required: true },
+    numberOfUnits: { type: Number },
     propertyType: {
       type: String,
       enum: Object.values(PropertyType),

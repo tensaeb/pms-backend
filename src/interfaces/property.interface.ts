@@ -28,6 +28,7 @@ export enum PropertyType {
   MOTEL = "motel",
   HOTEL = "hotel",
   MIXED_USE = "mixed_use",
+  GENERATOR = "generator",
 }
 
 export interface IProperty extends Document {

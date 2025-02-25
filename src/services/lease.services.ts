@@ -73,6 +73,12 @@ class LeaseService {
         throw new Error("leaseStart and leaseEnd dates are required");
       }
 
+      //check if the tenant exists
+      const checkTenant = Tenant.findById(tenant);
+      if (!checkTenant) {
+        throw new Error("Tenant not found");
+      }
+
       const newLease = new Lease({ ...leaseData, user: user });
 
       //Determine lease status based on dates
