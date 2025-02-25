@@ -1,6 +1,7 @@
 // models/task.model.ts
 import { Schema, model, Types } from "mongoose";
 import { ITask } from "../interfaces/task.interface";
+import { PropertyType } from "../interfaces/property.interface";
 
 const taskSchema = new Schema<ITask>(
   {
@@ -8,7 +9,11 @@ const taskSchema = new Schema<ITask>(
     description: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     assignedTo: { type: Schema.Types.ObjectId, ref: "User" },
-    property: { type: Schema.Types.ObjectId, ref: "Property" },
+    propertyType: {
+      type: String,
+      enum: Object.values(PropertyType),
+      required: true,
+    },
     dueDate: { type: Date, required: true },
     status: {
       type: String,
