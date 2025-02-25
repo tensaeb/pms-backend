@@ -24,6 +24,7 @@ class TaskService {
     try {
       const task = await Task.findById(id)
         .populate("assignedTo")
+        .populate("createdBy")
         .populate("property")
         .populate("maintenanceRequest");
       if (!task) {
