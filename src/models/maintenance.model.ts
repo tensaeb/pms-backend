@@ -47,11 +47,13 @@ const maintenanceSchema = new Schema<IMaintenance>(
       enum: ["Pending", "Approved", "Rejected"],
       default: "Pending",
     },
-    assignedMaintainer: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: false,
-    },
+    assignedMaintainer: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: false,
+      },
+    ],
     scheduledDate: { type: Date },
     priorityLevel: { type: String, enum: ["Low", "Medium", "High"] },
     estimatedCompletionTime: { type: Date },

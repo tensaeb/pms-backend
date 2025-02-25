@@ -94,6 +94,11 @@ class MaintenanceController {
         return;
       }
 
+      // Ensure maintainerId is an array
+      const maintainerIds = Array.isArray(maintainerId)
+        ? maintainerId
+        : [maintainerId];
+
       if (scheduledDate && new Date(scheduledDate) <= new Date()) {
         res
           .status(400)
@@ -112,7 +117,7 @@ class MaintenanceController {
 
       const updatedMaintenance = await maintenanceService.assignMaintainer(
         id,
-        maintainerId,
+        maintainerIds, // Pass the array of maintainer IDs
         scheduledDate,
         estimatedCompletionTime
       );
@@ -122,13 +127,13 @@ class MaintenanceController {
         .json(
           successResponse(
             updatedMaintenance,
-            "Maintenance request assigned to maintainer successfully"
+            "Maintenance request assigned to maintainer(s) successfully"
           )
         );
     } catch (error: any) {
       res
         .status(500)
-        .json(errorResponse(error.message, "Failed to assign maintainer"));
+        .json(errorResponse(error.message, "Failed to assign maintainer(s)"));
     }
   }
 

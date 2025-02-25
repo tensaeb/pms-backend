@@ -139,7 +139,7 @@ class MaintenanceService {
   // Function to assign maintainer
   public async assignMaintainer(
     id: string,
-    maintainerId: string,
+    maintainerIds: string[], // Changed to array
     scheduledDate?: Date,
     estimatedCompletionTime?: Date
   ): Promise<IMaintenance | null> {
@@ -177,7 +177,7 @@ class MaintenanceService {
       const updatedMaintenance = await Maintenance.findByIdAndUpdate(
         id,
         {
-          assignedMaintainer: maintainerId,
+          assignedMaintainer: maintainerIds, // Assign the array
           status: "In Progress",
           scheduledDate: scheduledDate,
           estimatedCompletionTime: estimatedCompletionTime,
@@ -185,6 +185,7 @@ class MaintenanceService {
         },
         { new: true }
       ).populate("assignedMaintainer");
+
       if (!updatedMaintenance) {
         // revert property status back
         await propertyService.updatePropertyStatus(
@@ -198,7 +199,9 @@ class MaintenanceService {
       }
 
       logger.info(
-        `Maintenance request ${id} assigned to maintainer ${maintainerId}.`
+        `Maintenance request ${id} assigned to maintainers ${maintainerIds.join(
+          ", "
+        )}.` // Log all assigned maintainers.
       );
       return updatedMaintenance;
     } catch (error) {
@@ -215,7 +218,7 @@ class MaintenanceService {
   ): Promise<IMaintenance[]> {
     try {
       const maintenances = await Maintenance.find({
-        assignedMaintainer: maintainerId,
+        assignedMaintainer: { $in: [maintainerId] }, // Find if the maintainerId is in the array.
       })
         .populate("tenant")
         .populate("property")

@@ -33,7 +33,7 @@ export interface IMaintenance extends Document {
     | "Inspected"
     | "Incomplete";
   approvalStatus: "Pending" | "Approved" | "Rejected";
-  assignedMaintainer?: Types.ObjectId;
+  assignedMaintainer?: Types.ObjectId[];
   scheduledDate?: Date;
   priorityLevel?: "Low" | "Medium" | "High";
   estimatedCompletionTime?: Date;
