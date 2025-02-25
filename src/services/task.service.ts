@@ -25,7 +25,6 @@ class TaskService {
       const task = await Task.findById(id)
         .populate("assignedTo")
         .populate("createdBy")
-        .populate("property")
         .populate("maintenanceRequest");
       if (!task) {
         logger.warn(`Task with ID ${id} not found.`);
@@ -48,7 +47,6 @@ class TaskService {
         new: true,
       })
         .populate("assignedTo")
-        .populate("property")
         .populate("maintenanceRequest");
       if (!updatedTask) {
         logger.warn(`Task with ID ${id} not found for updating.`);
@@ -109,7 +107,6 @@ class TaskService {
       const [tasks, totalTasks] = await Promise.all([
         Task.find(searchQuery)
           .populate("assignedTo")
-          .populate("property")
           .populate("maintenanceRequest")
           .skip(skip)
           .limit(limitNumber),
@@ -143,7 +140,6 @@ class TaskService {
         { new: true } // Return the updated document
       )
         .populate("assignedTo")
-        .populate("property")
         .populate("maintenanceRequest");
 
       if (!finishedTask) {
@@ -173,7 +169,6 @@ class TaskService {
       const [tasks, totalTasks] = await Promise.all([
         Task.find({})
           .populate("assignedTo")
-          .populate("property")
           .populate("maintenanceRequest")
           .populate("createdBy")
           .skip(skip)
@@ -226,7 +221,6 @@ class TaskService {
       const [tasks, totalTasks] = await Promise.all([
         Task.find(searchQuery)
           .populate("assignedTo")
-          .populate("property")
           .populate("maintenanceRequest")
           .populate("createdBy")
           .skip(skip)
