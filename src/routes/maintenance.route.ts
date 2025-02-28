@@ -105,8 +105,6 @@ router.get(
   maintenanceController.getMaintenanceRequestsByRegisteredUser
 );
 
-// *** REMAINING FROM PREVIOUS ANSWER ***
-
 router.get(
   "/tenant/:tenantId",
   maintenanceController.getMaintenancesByTenantId
@@ -120,6 +118,19 @@ router.get(
 router.get(
   "/registered-by-admin/:registeredByAdmin",
   maintenanceController.getMaintenancesByRegisteredByAdmin
+);
+
+// Get total expenses for maintenances registered by a user
+router.get(
+  "/expenses/registered/:registeredBy",
+  maintenanceController.getTotalExpensesByRegisteredBy
+);
+
+// Get total expenses for maintenances registered by a user
+router.get(
+  "/expenses/registered-by-admin/:registeredByAdmin",
+  admin, // or appropriate auth
+  maintenanceController.getTotalExpensesByRegisteredByAdmin
 );
 
 // NEW ROUTE: Get maintenance status counts by registeredBy

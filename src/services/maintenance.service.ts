@@ -983,6 +983,174 @@ class MaintenanceService {
       throw error;
     }
   }
+
+  public async getTotalExpensesByRegisteredBy(registeredBy: string): Promise<{
+    maintenances: { _id: string; totalExpenses: number }[];
+    totalOfTotalExpenses: number;
+  }> {
+    try {
+      const registeredUsers = await User.find({ registeredBy: registeredBy });
+      const registeredUserIds = registeredUsers.map((user) => user._id);
+
+      const maintenances = await Maintenance.aggregate([
+        {
+          $match: {
+            tenant: { $in: registeredUserIds },
+          },
+        },
+        {
+          $addFields: {
+            equipmentCostTotal: {
+              $ifNull: [
+                {
+                  $reduce: {
+                    input: "$expense.equipmentCost",
+                    initialValue: 0,
+                    in: { $add: ["$$value", { $ifNull: ["$$this.total", 0] }] },
+                  },
+                },
+                0,
+              ],
+            },
+            laborCostValue: { $ifNull: ["$expense.laborCost", 0] },
+          },
+        },
+        {
+          $addFields: {
+            calculatedTotalExpenses: {
+              $add: ["$equipmentCostTotal", "$laborCostValue"],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$_id",
+            calculatedTotalExpenses: { $first: "$calculatedTotalExpenses" }, // Get the totalExpenses
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            calculatedTotalExpenses: 1,
+          },
+        },
+      ]);
+
+      const totalOfTotalExpenses = maintenances.reduce(
+        (sum, maintenance) => sum + (maintenance.calculatedTotalExpenses || 0),
+        0
+      );
+
+      logger.info(
+        `Calculated total expenses for maintenances registered by ${registeredBy}`
+      );
+
+      return {
+        maintenances: maintenances.map((m) => ({
+          _id: m._id,
+          totalExpenses: m.calculatedTotalExpenses || 0,
+        })),
+        totalOfTotalExpenses: totalOfTotalExpenses,
+      };
+    } catch (error: any) {
+      logger.error(
+        `Error getting total expenses for maintenances registered by ${registeredBy}: ${error}`
+      );
+      throw error;
+    }
+  }
+
+  public async getTotalExpensesByRegisteredByAdmin(
+    registeredByAdmin: string
+  ): Promise<{
+    maintenances: { _id: string; totalExpenses: number }[];
+    totalOfTotalExpenses: number;
+  }> {
+    try {
+      // Find all users registered by this admin
+      const registeredUsers = await User.find({
+        registeredByAdmin: registeredByAdmin,
+      });
+      const registeredUserIds = registeredUsers.map((user) => user._id);
+
+      // If no users are registered by the admin, return empty results
+      if (registeredUserIds.length === 0) {
+        logger.info(
+          `No users registered by admin ${registeredByAdmin}. Returning empty results.`
+        );
+        return {
+          maintenances: [],
+          totalOfTotalExpenses: 0,
+        };
+      }
+
+      const maintenances = await Maintenance.aggregate([
+        {
+          $match: {
+            tenant: { $in: registeredUserIds },
+          },
+        },
+        {
+          $addFields: {
+            equipmentCostTotal: {
+              $ifNull: [
+                {
+                  $reduce: {
+                    input: "$expense.equipmentCost",
+                    initialValue: 0,
+                    in: { $add: ["$$value", { $ifNull: ["$$this.total", 0] }] },
+                  },
+                },
+                0,
+              ],
+            },
+            laborCostValue: { $ifNull: ["$expense.laborCost", 0] },
+          },
+        },
+        {
+          $addFields: {
+            calculatedTotalExpenses: {
+              $add: ["$equipmentCostTotal", "$laborCostValue"],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$_id",
+            calculatedTotalExpenses: { $first: "$calculatedTotalExpenses" }, // Get the totalExpenses
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            calculatedTotalExpenses: 1,
+          },
+        },
+      ]);
+
+      const totalOfTotalExpenses = maintenances.reduce(
+        (sum, maintenance) => sum + (maintenance.calculatedTotalExpenses || 0),
+        0
+      );
+
+      logger.info(
+        `Calculated total expenses for maintenances registered by admin ${registeredByAdmin}`
+      );
+
+      return {
+        maintenances: maintenances.map((m) => ({
+          _id: m._id,
+          totalExpenses: m.calculatedTotalExpenses || 0,
+        })),
+        totalOfTotalExpenses: totalOfTotalExpenses,
+      };
+    } catch (error: any) {
+      logger.error(
+        `Error getting total expenses for maintenances registered by admin ${registeredByAdmin}: ${error}`
+      );
+      throw error;
+    }
+  }
 }
 
 export const maintenanceService = new MaintenanceService();

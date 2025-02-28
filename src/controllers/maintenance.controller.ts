@@ -572,6 +572,79 @@ class MaintenanceController {
         );
     }
   }
+
+  public async getTotalExpensesByRegisteredBy(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredBy } = req.params;
+
+      if (!registeredBy) {
+        res.status(400).json(errorResponse("RegisteredBy ID is required."));
+        return;
+      }
+
+      const expenses = await maintenanceService.getTotalExpensesByRegisteredBy(
+        registeredBy
+      );
+      res
+        .status(200)
+        .json(
+          successResponse(
+            expenses,
+            "Total expenses for maintenances fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch total expenses for maintenances"
+          )
+        );
+    }
+  }
+
+  public async getTotalExpensesByRegisteredByAdmin(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { registeredByAdmin } = req.params;
+
+      if (!registeredByAdmin) {
+        res
+          .status(400)
+          .json(errorResponse("RegisteredByAdmin ID is required."));
+        return;
+      }
+
+      const expenses =
+        await maintenanceService.getTotalExpensesByRegisteredByAdmin(
+          registeredByAdmin
+        );
+      res
+        .status(200)
+        .json(
+          successResponse(
+            expenses,
+            "Total expenses for maintenances fetched successfully for users registered by admin"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch total expenses for maintenances for users registered by admin"
+          )
+        );
+    }
+  }
 }
 
 export const maintenanceController = new MaintenanceController();
