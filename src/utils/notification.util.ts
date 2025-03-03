@@ -10,10 +10,10 @@ const emailTransporter = nodemailer.createTransport({
   },
 });
 
-const twilioClient = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
+// const twilioClient = twilio(
+//   process.env.TWILIO_ACCOUNT_SID,
+//   process.env.TWILIO_AUTH_TOKEN
+// );
 
 export async function sendEmail(
   email: string,
@@ -28,16 +28,16 @@ export async function sendEmail(
   });
 }
 
-export async function sendSMS(
-  phoneNumber: string,
-  message: string
-): Promise<void> {
-  await twilioClient.messages.create({
-    body: message,
-    from: process.env.TWILIO_PHONE_NUMBER,
-    to: phoneNumber,
-  });
-}
+// export async function sendSMS(
+//   phoneNumber: string,
+//   message: string
+// ): Promise<void> {
+//   await twilioClient.messages.create({
+//     body: message,
+//     from: process.env.TWILIO_PHONE_NUMBER,
+//     to: phoneNumber,
+//   });
+// }
 
 export async function sendPushNotification(
   io: Server,

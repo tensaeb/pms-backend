@@ -4,7 +4,7 @@ import { INotification } from "../interfaces/notification.interface";
 const notificationSchema = new Schema<INotification>({
   recipientId: { type: String, required: true },
   title: { type: String, required: true },
-  message: { type: String, required: true },
+  message: { type: String },
   isRead: { type: Boolean, required: true, default: false },
   url: { type: String, required: false, default: "" },
   type: {

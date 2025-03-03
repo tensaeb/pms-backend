@@ -4,18 +4,33 @@ import router from "./routes";
 import cors from "cors";
 import path from "path";
 import { connectDB } from "./config/db";
+import { createServer } from "http"; // Import createServer
+import { Server } from "socket.io"; // Import Socket.IO Server
+
 // Import the scheduler
-import "./schedulers/leaseScheduler"; // <---- Import and execute scheduler
-// import { startLeaseScheduler } from './schedulers/leaseScheduler';
+import "./schedulers/leaseScheduler";
 
 class App {
   public app: Application;
+  public httpServer: any; // Add httpServer
+  public io: Server; // Add io
 
   constructor() {
     this.app = express();
+    this.httpServer = createServer(this.app); // Create HTTP server
+    this.io = new Server(this.httpServer, {
+      // Initialize Socket.IO
+      cors: {
+        origin: "*", // Allow all origins during development
+        methods: ["GET", "POST", "PUT", "DELETE"],
+        credentials: true,
+      },
+    });
+
     this.config();
     this.routes();
     this.connectDatabase();
+    this.setupSocketIO(); // Initialize and setup socket io
   }
 
   private config(): void {
@@ -29,28 +44,34 @@ class App {
     this.app.get("/", (req: Request, res: Response) => {
       res.send("Welcome to BETA PMS!!!");
     });
-
-    // this.app.get("/api-docs", (req: Request, res: Response) => {
-    //   res.redirect("https://documenter.getpostman.com/view/6379484/2sAXqtc2G5");
-    // });
-
-    //Serve static files from the 'uploads directory
-    // const uploadsDir = getUploadsDir();
-    // this.app.use("/uploads", express.static(uploadsDir));
   }
 
   public async connectDatabase(): Promise<void> {
     await connectDB();
-
-    // START THE SCHEDULER HERE RIGHT AFTER CONNECTION ESTABLISHED
     console.log("starting scheduler");
     require("./schedulers/leaseScheduler");
   }
 
-  private middlewares(): void {
-    // this.app.use(errorHandler); // Apply error handling
+  private setupSocketIO(): void {
+    this.app.set("socketio", this.io);
+
+    this.io.on("connection", (socket) => {
+      console.log("A user connected");
+
+      socket.on("join", (recipientId) => {
+        socket.join(recipientId);
+        console.log(`User joined room: ${recipientId}`);
+      });
+
+      socket.on("disconnect", () => {
+        console.log("A user disconnected");
+      });
+    });
   }
 }
+
 const appInstance = new App();
 export const app = appInstance.app;
+export const httpServer = appInstance.httpServer; // Export httpServer
+export const io = appInstance.io; // Export the Socket.IO instance
 export default appInstance;

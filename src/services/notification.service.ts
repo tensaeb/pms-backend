@@ -3,7 +3,7 @@ import { Notification } from "../models/notification.model";
 import {
   sendEmail,
   sendPushNotification,
-  sendSMS,
+  // sendSMS,
 } from "../utils/notification.util";
 
 class NotificationServices {
@@ -57,10 +57,10 @@ class NotificationServices {
   }
 
   // Send an SMS notification
-  async createSMSNotification(phoneNumber: string, message: string) {
-    await sendSMS(phoneNumber, message);
-    return { phoneNumber, message };
-  }
+  // async createSMSNotification(phoneNumber: string, message: string) {
+  //   await sendSMS(phoneNumber, message);
+  //   return { phoneNumber, message };
+  // }
 }
 
 export const notificationServices = new NotificationServices();
