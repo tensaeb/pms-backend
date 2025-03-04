@@ -23,8 +23,26 @@ class NotificationServices {
     return notification;
   }
 
-  async getUserNotifications(recipientId: string) {
-    return await Notification.find({ recipientId }).sort({ timestamp: -1 });
+  async getUserNotifications(
+    recipientId: string,
+    page: number = 1,
+    limit: number = 10
+  ) {
+    const skip = (page - 1) * limit; // calculate documents to skip
+    const notifications = await Notification.find({ recipientId })
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Notification.countDocuments({ recipientId }); // total document number
+
+    return {
+      notifications,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async markAsRead(notificationId: string) {

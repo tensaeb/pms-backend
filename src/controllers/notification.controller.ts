@@ -8,17 +8,35 @@ class NotificationController {
   async getUserNotifications(req: Request, res: Response): Promise<void> {
     try {
       const { recipientId } = req.params;
-      const notifications = await notificationServices.getUserNotifications(
-        recipientId
+      const page = parseInt(req.query.page as string) || 1; // Default to page 1
+      const limit = parseInt(req.query.limit as string) || 10; // Default to 10 items per page
+
+      const {
+        notifications,
+        total,
+        page: currentPage,
+        limit: currentLimit,
+        totalPages,
+      } = await notificationServices.getUserNotifications(
+        recipientId,
+        page,
+        limit
       );
-      res
-        .status(200)
-        .json(
-          successResponse(
-            notifications,
-            "User notifications fetched successfully"
-          )
-        );
+
+      const responseData = {
+        notifications,
+        total,
+        page: currentPage,
+        limit: currentLimit,
+        totalPages,
+      };
+
+      res.status(200).json(
+        successResponse(
+          responseData, // Send the pagination data in the response
+          "User notifications fetched successfully"
+        )
+      );
     } catch (error: any) {
       res
         .status(500)
@@ -27,7 +45,6 @@ class NotificationController {
         );
     }
   }
-
   // Mark a notification as read
   async markAsRead(req: Request, res: Response): Promise<void> {
     try {
