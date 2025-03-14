@@ -11,6 +11,7 @@ import { PropertyStatus, isPropertyStatus } from "../utils/typeCheckers";
 import { Property } from "../models/property.model";
 import logger from "../utils/logger"; // Import logger
 import mongoose, { Types } from "mongoose";
+import { notificationServices } from "./notification.service";
 
 class MaintenanceService {
   private readonly UPLOAD_DIR = path.join(
@@ -99,10 +100,26 @@ class MaintenanceService {
         newMaintenance.requestedFiles = processedFileUrls;
       }
 
+      // **NOTIFICATION: New Maintenance Request**
+      const tenantUser = await User.findById(tenant); // Assuming 'tenant' is the tenant's ID
+
+      if (tenantUser) {
+        const notificationTitle = "New Maintenance Request Created";
+        const notificationMessage = `A new maintenance request has been created by: ${tenantUser}`;
+
+        // Notify the tenant
+        await notificationServices.createNotification(
+          tenantUser.registeredByAdmin.toString(),
+          notificationTitle,
+          notificationMessage,
+          "info"
+        );
+      }
       const savedMaintenance = await newMaintenance.save();
       logger.info(
         `Maintenance request created with ID: ${savedMaintenance._id}`
       );
+
       return savedMaintenance;
     } catch (error) {
       logger.error(`Error creating maintenance request: ${error}`);
@@ -129,6 +146,8 @@ class MaintenanceService {
         throw new Error("Maintenance request not found");
       }
 
+      //** NOTIFICATION: Maintenance Request Approved */
+
       logger.info(`Maintenance request ${id} approved.`);
       return updatedMaintenance;
     } catch (error) {
@@ -144,7 +163,9 @@ class MaintenanceService {
     estimatedCompletionTime?: Date
   ): Promise<IMaintenance | null> {
     try {
-      const maintenance = await Maintenance.findById(id).populate("property");
+      const maintenance = await Maintenance.findById(id)
+        .populate("property")
+        .populate("tenant");
 
       if (!maintenance || !maintenance.property) {
         logger.warn(
@@ -156,6 +177,7 @@ class MaintenanceService {
       }
 
       const propertyId = (maintenance.property as any)._id.toString();
+      const tenantId = (maintenance.tenant as any)._id.toString();
 
       // Check if originalPropertyStatus is valid, or default to "open"
       let originalPropertyStatus: PropertyStatus = "open";
@@ -197,6 +219,44 @@ class MaintenanceService {
         );
         throw new Error("Maintenance request not found");
       }
+
+      // **NOTIFICATION: Maintenance Request Assigned**
+      const notificationTitle = "Maintenance Request Assigned";
+      const notificationMessage = `Maintenance request ${id} has been assigned to ${
+        updatedMaintenance.assignedMaintainer
+          ? (updatedMaintenance.assignedMaintainer as any[])
+              .map((m) => (m as any).name)
+              .join(", ")
+          : "No Maintainer assigned yet"
+      }.`;
+      const tenant = await User.find(tenantId);
+
+      // Notify the tenant
+      await notificationServices.createNotification(
+        tenantId,
+        notificationTitle,
+        notificationMessage,
+        "info"
+      );
+
+      // Notify each assigned maintainer
+      if (updatedMaintenance.assignedMaintainer) {
+        for (const maintainer of updatedMaintenance.assignedMaintainer as any[]) {
+          await notificationServices.createNotification(
+            maintainer._id,
+            notificationTitle,
+            notificationMessage,
+            "info"
+          );
+        }
+      }
+
+      await notificationServices.createNotification(
+        tenantId.registeredByAdmin,
+        notificationTitle,
+        notificationMessage,
+        "info"
+      );
 
       logger.info(
         `Maintenance request ${id} assigned to maintainers ${maintainerIds.join(
@@ -488,19 +548,59 @@ class MaintenanceService {
     updateData: Partial<IMaintenance>
   ): Promise<IMaintenance | null> {
     try {
+      // Retrieve the existing maintenance request before updating
+      const existingMaintenance = await Maintenance.findById(id)
+        .populate("tenant")
+        .populate("assignedMaintainer");
+
+      if (!existingMaintenance) {
+        logger.warn(`Maintenance request with ID ${id} not found for update.`);
+        throw new Error("Maintenance request not found");
+      }
+
       const updatedMaintenance = await Maintenance.findByIdAndUpdate(
         id,
         updateData,
         {
           new: true,
         }
-      );
+      )
+        .populate("tenant")
+        .populate("assignedMaintainer"); // Populate after update to get latest values
+
       if (!updatedMaintenance) {
         logger.warn(`Maintenance request with ID ${id} not found for update.`);
         throw new Error("Maintenance request not found");
       }
 
+      // Check if the status was changed
+      if (
+        updateData.status &&
+        updateData.status !== existingMaintenance.status
+      ) {
+        // Notify tenant
+        const tenantUser = existingMaintenance.tenant as any; // Assuming tenant is populated
+
+        const notificationTitle = "Maintenance Request Status Updated";
+        const notificationMessage = `Your maintenance request status has been updated to ${updateData.status}.`;
+        if (tenantUser) {
+          await notificationServices.createNotification(
+            tenantUser._id,
+            notificationTitle,
+            notificationMessage,
+            "info"
+          );
+        }
+        //Notify the admins when status has been changed
+        await notificationServices.createNotification(
+          tenantUser.registeredByAdmin,
+          notificationTitle,
+          notificationMessage,
+          "info"
+        );
+      }
       logger.info(`Maintenance request ${id} updated successfully.`);
+
       return updatedMaintenance;
     } catch (error) {
       logger.error(`Error updating maintenance request ${id}: ${error}`);

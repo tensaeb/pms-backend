@@ -15,6 +15,7 @@ import guestRoutes from "./guest.route";
 import clearanceRoutes from "./clearance.route";
 import tasksRoutes from "./task.routes";
 import notificationsRoutes from "./notification.route";
+import branchRoutes from "./branch.route";
 
 const router: Router = express.Router();
 
@@ -101,5 +102,6 @@ router.use("/guests", guestRoutes);
 router.use("/clearance", clearanceRoutes);
 router.use("/tasks", tasksRoutes);
 router.use("/notifications", notificationsRoutes);
+router.use("/branch", branchRoutes);
 
 export default router;

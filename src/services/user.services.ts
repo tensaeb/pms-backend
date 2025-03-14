@@ -142,7 +142,8 @@ class UserService {
         throw new Error("Logged in user ID is required");
       }
 
-      const { name, email, phoneNumber, address, role, status } = userData;
+      const { name, email, phoneNumber, address, role, status, branch } =
+        userData; //  added branch
 
       const defaultPassword = randomInt(10000, 100000).toString();
       const password = userData.password || defaultPassword;
@@ -158,6 +159,7 @@ class UserService {
         tempPassword: defaultPassword,
         password: hashedPassword,
         registeredBy: loggedInUserId,
+        branch, // Add branch here
       });
 
       if (file) {

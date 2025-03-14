@@ -1,3 +1,4 @@
+// src/models/user.model.ts
 import { Schema, model } from "mongoose";
 import { IUser } from "../interfaces/user.interface";
 
@@ -72,6 +73,7 @@ const userSchema = new Schema<IUser>(
       editMaintenance: { type: Boolean, default: false },
       deleteMaintenance: { type: Boolean, default: false },
     },
+    branch: { type: Schema.Types.ObjectId, ref: "Branch" }, //  add branch here
   },
   { timestamps: true }
 );

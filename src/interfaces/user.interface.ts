@@ -1,4 +1,4 @@
-import { Document, Schema } from "mongoose";
+import { Document, Schema, Types } from "mongoose";
 
 export interface IUser extends Document {
   name: string;
@@ -21,6 +21,7 @@ export interface IUser extends Document {
     type: typeof Schema.Types.ObjectId;
     ref: string;
   };
+  branch?: Types.ObjectId; // Add branch here
   tempPassword: string;
   maintenanceSkills: [string];
   permissions: {
