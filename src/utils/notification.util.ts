@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { Server } from "socket.io";
 import twilio from "twilio";
+import logger from "./logger";
 
 const emailTransporter = nodemailer.createTransport({
   service: "gmail",
@@ -26,6 +27,10 @@ export async function sendEmail(
     subject,
     text: message,
   });
+  //logger email
+  logger.info(
+    `Email sent to ${email}: subject: ${subject} message: ${message}`
+  );
 }
 
 // export async function sendSMS(
@@ -46,4 +51,7 @@ export async function sendPushNotification(
   message: string
 ): Promise<void> {
   io.to(recipientId).emit("newNotification", { title, message });
+  logger.info(
+    `SendPushNotification: Push notification sent to ${recipientId} titled: ${title} message: ${message}`
+  );
 }

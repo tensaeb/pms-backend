@@ -9,6 +9,7 @@ import { Server } from "socket.io"; // Import Socket.IO Server
 
 // Import the scheduler
 import "./schedulers/leaseScheduler";
+import logger from "./utils/logger";
 
 class App {
   public app: Application;
@@ -56,15 +57,15 @@ class App {
     this.app.set("socketio", this.io);
 
     this.io.on("connection", (socket) => {
-      console.log("A user connected");
+      logger.info(`SocketIO: A User is connected`);
 
       socket.on("join", (recipientId) => {
         socket.join(recipientId);
-        console.log(`User joined room: ${recipientId}`);
+        logger.info(`SocketIO: User: ${recipientId} joined room`);
       });
 
       socket.on("disconnect", () => {
-        console.log("A user disconnected");
+        logger.info(`SocketIO: A User is disconnected`);
       });
     });
   }

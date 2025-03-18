@@ -5,6 +5,7 @@ import {
   sendPushNotification,
   // sendSMS,
 } from "../utils/notification.util";
+import logger from "../utils/logger";
 
 class NotificationServices {
   async createNotification(
@@ -36,6 +37,11 @@ class NotificationServices {
 
     const total = await Notification.countDocuments({ recipientId }); // total document number
 
+    //logger
+    logger.info(
+      `NotificationService: Get user notifications for recipientId: ${recipientId}`
+    );
+
     return {
       notifications,
       total,
@@ -50,6 +56,10 @@ class NotificationServices {
       notificationId,
       { isRead: true },
       { new: true }
+    );
+    //logger info
+    logger.info(
+      `NotificationService: Marked as read notification with id: ${notificationId}`
     );
   }
 

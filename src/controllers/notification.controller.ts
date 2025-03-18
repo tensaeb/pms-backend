@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { errorResponse, successResponse } from "../utils/apiResponse";
 import { notificationServices } from "../services/notification.service";
 import { Server } from "socket.io";
+import { io } from "../app";
 
 class NotificationController {
   // Get user notifications
@@ -77,7 +78,6 @@ class NotificationController {
   async createPushNotification(req: Request, res: Response): Promise<void> {
     try {
       const { recipientId, title, message } = req.body;
-      const io: Server = req.app.get("socketio"); // Get the Socket.IO server instance
       const notification = await notificationServices.createPushNotification(
         io,
         recipientId,
@@ -126,31 +126,6 @@ class NotificationController {
         );
     }
   }
-
-  // Create an SMS notification (and send it)
-  //   async createSMSNotification(req: Request, res: Response): Promise<void> {
-  //     try {
-  //       const { phoneNumber, message } = req.body;
-  //       const notification = await notificationServices.createSMSNotification(
-  //         phoneNumber,
-  //         message
-  //       );
-  //       res
-  //         .status(201)
-  //         .json(
-  //           successResponse(
-  //             notification,
-  //             "SMS notification created and sent successfully"
-  //           )
-  //         );
-  //     } catch (error: any) {
-  //       res
-  //         .status(500)
-  //         .json(
-  //           errorResponse(error.message, "Failed to create SMS notification")
-  //         );
-  //     }
-  //   }
 }
 
 export const notificationController = new NotificationController();
