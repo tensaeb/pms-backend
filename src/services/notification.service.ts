@@ -21,6 +21,11 @@ class NotificationServices {
       type,
     });
     await notification.save();
+
+    //logger
+    logger.info(
+      `NotificationService: new Notification created with Id: ${notification.id}`
+    );
     return notification;
   }
 
@@ -52,14 +57,14 @@ class NotificationServices {
   }
 
   async markAsRead(notificationId: string) {
+    //logger info
+    logger.info(
+      `NotificationService: Marked as read notification with id: ${notificationId}`
+    );
     return await Notification.findByIdAndUpdate(
       notificationId,
       { isRead: true },
       { new: true }
-    );
-    //logger info
-    logger.info(
-      `NotificationService: Marked as read notification with id: ${notificationId}`
     );
   }
 
