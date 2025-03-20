@@ -165,8 +165,7 @@ class MaintenanceService {
     try {
       const maintenance = await Maintenance.findById(id)
         .populate("property")
-        .populate("tenant")
-        .populate("inspectedBy");
+        .populate("tenant");
 
       if (!maintenance || !maintenance.property) {
         logger.warn(
@@ -220,46 +219,6 @@ class MaintenanceService {
         );
         throw new Error("Maintenance request not found");
       }
-
-      // **NOTIFICATION: Maintenance Request Assigned**
-      const notificationTitle = "Maintenance Request Assigned";
-      const notificationMessage = `Maintenance request ${id} has been assigned to ${
-        updatedMaintenance.assignedMaintainer
-          ? (updatedMaintenance.assignedMaintainer as any[])
-              .map((m) => (m as any).name)
-              .join(", ")
-          : "No Maintainer assigned yet"
-      }.`;
-      const tenant = await User.find(tenantId);
-
-      // Notify the tenant
-      await notificationServices.createNotification(
-        tenantId,
-        notificationTitle,
-        notificationMessage,
-        "info"
-      );
-
-      // Notify each assigned maintainer
-      if (updatedMaintenance.assignedMaintainer) {
-        for (const maintainer of updatedMaintenance.assignedMaintainer as any[]) {
-          await notificationServices.createNotification(
-            maintainer._id,
-            notificationTitle,
-            notificationMessage,
-            "info"
-          );
-        }
-      }
-
-      console.log("RegisteredByAdminId: ", tenantId.registeredByAdmin);
-
-      await notificationServices.createNotification(
-        tenantId.registeredByAdmin,
-        notificationTitle,
-        notificationMessage,
-        "info"
-      );
 
       logger.info(
         `Maintenance request ${id} assigned to maintainers ${maintainerIds.join(
