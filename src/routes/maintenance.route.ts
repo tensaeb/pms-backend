@@ -111,6 +111,11 @@ router.get(
 );
 
 router.get(
+  "/inspectedBy/:inspectedBy",
+  maintenanceController.getMaintenancesByInspectedBy
+);
+
+router.get(
   "/assigned/:assignedMaintainer",
   maintenanceController.getMaintenancesByAssignedMaintainer
 );

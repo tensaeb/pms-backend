@@ -645,6 +645,38 @@ class MaintenanceController {
         );
     }
   }
+
+  public async getMaintenancesByInspectedBy(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { inspectedBy } = req.params;
+      const maintenanceRequests =
+        await maintenanceService.getMaintenancesByInspectedBy(
+          inspectedBy,
+          req.query
+        );
+
+      res
+        .status(200)
+        .json(
+          successResponse(
+            maintenanceRequests,
+            "Maintenance requests for the inspectedBy user fetched successfully"
+          )
+        );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            error.message,
+            "Failed to fetch maintenance requests for the inspectedBy user"
+          )
+        );
+    }
+  }
 }
 
 export const maintenanceController = new MaintenanceController();

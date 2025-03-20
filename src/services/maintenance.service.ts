@@ -1220,6 +1220,64 @@ class MaintenanceService {
       throw error;
     }
   }
+
+  public async getMaintenancesByInspectedBy(
+    inspectedBy: string,
+    query: any
+  ): Promise<{
+    maintenanceRequests: Partial<IMaintenance>[];
+    totalPages: number;
+    currentPage: number;
+    totalMaintenanceRequests: number;
+  }> {
+    try {
+      const { page = 1, limit = 10, search = "", status } = query;
+
+      const searchQuery: any = {
+        inspectedBy: inspectedBy,
+      };
+
+      if (search) {
+        searchQuery.$or = [
+          { "tenant.name": { $regex: search, $options: "i" } },
+          { "property.name": { $regex: search, $options: "i" } },
+          { typeOfRequest: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      if (status) {
+        searchQuery.status = status;
+      }
+
+      const maintenanceRequests = await Maintenance.find(searchQuery)
+        .populate("tenant")
+        .populate("property")
+        .populate("assignedMaintainer")
+        .populate("inspectedBy")
+        .skip((page - 1) * limit)
+        .limit(Number(limit));
+
+      const totalMaintenanceRequests = await Maintenance.countDocuments(
+        searchQuery
+      );
+
+      logger.info(
+        `Retrieved ${maintenanceRequests.length} maintenance requests for inspectedBy ${inspectedBy} (page ${page}, limit ${limit}, search "${search}", status "${status}"). Total requests: ${totalMaintenanceRequests}`
+      );
+
+      return {
+        maintenanceRequests,
+        totalPages: Math.ceil(totalMaintenanceRequests / limit),
+        currentPage: Number(page),
+        totalMaintenanceRequests,
+      };
+    } catch (error) {
+      logger.error(
+        `Error getting maintenance requests for inspectedBy ${inspectedBy}: ${error}`
+      );
+      throw error;
+    }
+  }
 }
 
 export const maintenanceService = new MaintenanceService();
