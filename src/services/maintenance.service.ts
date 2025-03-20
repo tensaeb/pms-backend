@@ -165,7 +165,8 @@ class MaintenanceService {
     try {
       const maintenance = await Maintenance.findById(id)
         .populate("property")
-        .populate("tenant");
+        .populate("tenant")
+        .populate("inspectedBy");
 
       if (!maintenance || !maintenance.property) {
         logger.warn(
@@ -251,6 +252,8 @@ class MaintenanceService {
         }
       }
 
+      console.log("RegisteredByAdminId: ", tenantId.registeredByAdmin);
+
       await notificationServices.createNotification(
         tenantId.registeredByAdmin,
         notificationTitle,
@@ -282,7 +285,8 @@ class MaintenanceService {
       })
         .populate("tenant")
         .populate("property")
-        .populate("assignedMaintainer");
+        .populate("assignedMaintainer")
+        .populate("inspectedBy");
       logger.info(
         `Retrieved maintenance requests assigned to maintainer ${maintainerId}.`
       );
@@ -307,7 +311,8 @@ class MaintenanceService {
       const maintenances = await Maintenance.find(query)
         .populate("tenant")
         .populate("property")
-        .populate("assignedMaintainer");
+        .populate("assignedMaintainer")
+        .populate("inspectedBy");
       logger.info(
         `Retrieved completed maintenance requests (maintainer ID: ${
           maintainerId || "all"
@@ -498,6 +503,7 @@ class MaintenanceService {
       const maintenanceRequests = await Maintenance.find(searchQuery)
         .populate("tenant")
         .populate("property")
+        .populate("inspectedBy")
         .skip((page - 1) * limit)
         .limit(Number(limit));
 
@@ -527,7 +533,8 @@ class MaintenanceService {
       const maintenance = await Maintenance.findById(id)
         .populate("tenant")
         .populate("property")
-        .populate("assignedMaintainer");
+        .populate("assignedMaintainer")
+        .populate("inspectedBy");
 
       if (!maintenance) {
         logger.warn(`Maintenance request with ID ${id} not found.`);
@@ -824,6 +831,7 @@ class MaintenanceService {
       const maintenanceRequests = await Maintenance.find(searchQuery)
         .populate("tenant")
         .populate("property")
+        .populate("inspectedBy")
         .skip((page - 1) * limit)
         .limit(Number(limit));
 
@@ -880,6 +888,7 @@ class MaintenanceService {
       const maintenanceRequests = await Maintenance.find(searchQuery)
         .populate("property")
         .populate("tenant")
+        .populate("inspectedBy")
         .skip((page - 1) * limit)
         .limit(Number(limit));
 
@@ -959,6 +968,7 @@ class MaintenanceService {
       const maintenanceRequests = await Maintenance.find(searchQuery)
         .populate("tenant")
         .populate("property")
+        .populate("inspectedBy")
         .skip(skip)
         .limit(parsedLimit);
 
